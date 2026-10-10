@@ -1,5 +1,5 @@
 """Gymnazo Ability & Capacity Metrics: stdlib-only server (SQLite). Run: PORT=8090 DB_PATH=./metrics.db python3 server.py"""
-import http.server, socketserver, sqlite3, json, hashlib, hmac, secrets, os, time, re, math, threading
+import http.server, socketserver, sqlite3, json, hashlib, hmac, secrets, os, time, re, math, threading, csv, io, difflib
 from datetime import date, datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 from zoneinfo import ZoneInfo
@@ -212,23 +212,221 @@ def parse_result(d, b):
     try: dy = date.fromisoformat(str(b.get("day") or today().isoformat()))
     except Exception: return None, "Please pick a valid date."
     if dy > today() or dy < date(2000, 1, 1): return None, "Please pick today or an earlier date."
-    return {"p": p, "s": s, "sel": sel, "day": dy.isoformat(), "note": clean(b.get("note"), 300)}, None
+    return {"p": p, "s": s, "sel": sel, "day": dy.isoformat(), "note": clean(b.get("note"), 500)}, None
+
+
+# ---------- CSV import / export ----------
+MAX_IMPORT_ROWS = 2000
+IMPORT_COLS = ["Date", "Exercise", "Result", "Second result (optional)", "Side / Hand / Foot", "Equipment", "Damper", "Note"]
+
+def norm(s): return re.sub(r"[^a-z0-9]", "", str(s).casefold().replace("º", "").replace("&", "and"))
+
+def fmt_time(sec):
+    sec = int(round(sec)); h, m, x = sec // 3600, sec % 3600 // 60, sec % 60
+    return f"{h}:{m:02d}:{x:02d}" if h else f"{m}:{x:02d}"
+def fmt_num(v): return ("%g" % round(v, 2))
+
+def parse_date(t):
+    t = str(t or "").strip().replace(",", " "); t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"(\d)(st|nd|rd|th)\b", r"\1", t)
+    for f in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%m/%d/%y", "%B %d %Y", "%b %d %Y", "%d %B %Y", "%d %b %Y", "%Y%m%d", "%m.%d.%Y"):
+        try: return datetime.strptime(t, f).date()
+        except Exception: pass
+    return None
+
+def parse_time_cell(t):
+    t = str(t or "").strip().lower()
+    if re.fullmatch(r"\d+(:\d{1,2}){1,2}(\.\d+)?", t):
+        parts = [float(x) for x in t.split(":")]
+        if any(x >= 60 for x in parts[1:]): return None
+        sec = 0
+        for x in parts: sec = sec * 60 + x
+        return sec
+    m = re.fullmatch(r"(?:(\d+)\s*(?:h|hr|hrs|hours?))?\s*(?:(\d+)\s*(?:m|min|mins|minutes?))?\s*(?:(\d+(?:\.\d+)?)\s*(?:s|sec|secs|seconds?))?", t)
+    if m and any(m.groups()): return int(m.group(1) or 0) * 3600 + int(m.group(2) or 0) * 60 + float(m.group(3) or 0)
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)", t)
+    return float(m.group(1)) if m else None
+
+def parse_num_cell(t):
+    m = re.search(r"\d+(?:\.\d+)?", str(t or "").replace(",", ""))
+    return float(m.group(0)) if m else None
+
+def match_option(options, v):
+    v = str(v or "").strip()
+    if not v: return None
+    try:
+        f = float(v)
+        if f == int(f): v = str(int(f))
+    except Exception: pass
+    for o in options:
+        if o.casefold() == v.casefold(): return o
+    nv = norm(v)
+    if not nv: return None
+    c = [o for o in options if norm(o).startswith(nv) or nv in norm(o)]
+    return c[0] if len(c) == 1 else None
+
+def match_exercise(q, cands):
+    nq = norm(q)
+    if not nq: return None, []
+    ex = [c for c in cands if c[2] == nq]
+    if len(ex) == 1: return ex[0][0], []
+    toks = [t for t in re.findall(r"[a-z0-9]+", str(q).casefold()) if len(t) >= 2]
+    con = [c for c in cands if len(nq) >= 4 and nq in c[2]] or [c for c in cands if toks and all(t in c[2] for t in toks)]
+    if len(con) == 1: return con[0][0], []
+    rev = [c for c in cands if len(c[2]) >= 6 and c[2] in nq]
+    if len(rev) == 1: return rev[0][0], []
+    sc = sorted(((max(difflib.SequenceMatcher(None, nq, c[2]).ratio(), difflib.SequenceMatcher(None, nq, c[2][:len(nq) + 4]).ratio() * .9), c) for c in cands), key=lambda x: -x[0])
+    sug, seen = [], set()
+    for c in con + [x[1] for x in sc if x[0] >= .45]:
+        if c[0] not in seen: seen.add(c[0]); sug.append({"id": c[0], "name": c[1]})
+    return None, sug[:3]
+
+def colkey(h):
+    h = norm(h)
+    if h.startswith("date") or h == "day" or h == "when": return "date"
+    if h in ("exercise", "exercisename", "metric", "name", "test", "movement"): return "ex"
+    if "second" in h or "extra" in h or h in ("result2", "secondary"): return "s"
+    if h.startswith("result") or h in ("score", "value", "primary", "time", "weight", "reps", "result1"): return "p"
+    if "equip" in h: return "equipment"
+    if "damper" in h: return "damper"
+    if "side" in h or "hand" in h or "foot" in h or "leg" in h: return "side"
+    if "note" in h or "comment" in h: return "note"
+    return None
+
+def import_template():
+    out = io.StringIO(); w = csv.writer(out); w.writerow(IMPORT_COLS)
+    for r in [["2025-03-14", "Grip Strength", "72", "", "Right Hand", "", "", "Felt strong today"],
+              ["3/14/2025", "Gymnazo Mile", "9:45", "", "", "", "", "Windy day"],
+              ["March 14 2025", "Row Machine - 500m Row", "1:58", "", "", "", "5", ""],
+              ["2025-04-02", "Overhead Press (in 1 minute)", "45", "20", "", "Barbell", "", "20 reps, last 5 were hard"],
+              ["2025-04-02", "Single Leg Balance", "75", "10", "Left Leg", "", "", "75 seconds, holding 10 lb"],
+              ["2025-05-20", "Pull-ups", "8", "", "", "", "", "With a light band"]]: w.writerow(r)
+    return out.getvalue()
+
+def import_reference():
+    out = io.StringIO(); w = csv.writer(out); w.writerow(["Exercise (copy this name)", "Result is", "Second result is", "Choices to fill in"])
+    for r in db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE active=1 ORDER BY sort,id"):
+        e = ex_row(r); d = e["def"]
+        def hint(m): return "time as mm:ss, h:mm:ss or seconds" if m["type"] == "time" else (m["label"] + (" (" + m["unit"] + ")" if m["unit"] else ""))
+        w.writerow([e["name"], hint(d["primary"]), (hint(d["secondary"]) + (" (optional)" if d["secondary"].get("optional", True) else "")) if d["secondary"] else "",
+                    "; ".join(x["label"] + ": " + " / ".join(x["options"]) + ("" if x["required"] else " (optional)") for x in d["selectors"])])
+    return out.getvalue()
+
+def cell_safe(v):
+    v = str(v or ""); return "'" + v if v[:1] in ("=", "+", "-", "@") else v
+
+def export_csv(uid):
+    out = io.StringIO(); w = csv.writer(out); w.writerow(IMPORT_COLS)
+    rows = db.execute("SELECT r.day,e.name,r.pval,r.sval,r.selectors,r.note,e.def FROM results r JOIN exercises e ON e.id=r.exercise_id WHERE r.user_id=? ORDER BY r.day,r.id", (uid,)).fetchall()
+    for day, name, pv, sv, sel, note, dj in rows:
+        d = json.loads(dj); sel = json.loads(sel or "{}")
+        f = lambda m, v: "" if v is None else (fmt_time(v) if m["type"] == "time" else fmt_num(v))
+        side = next((sel[x["key"]] for x in d["selectors"] if x["key"] not in ("equipment", "damper") and x["key"] in sel), "")
+        w.writerow([day, cell_safe(name), f(d["primary"], pv), f(d["secondary"], sv) if d.get("secondary") else "", side, sel.get("equipment", ""), sel.get("damper", ""), cell_safe(note)])
+    return out.getvalue()
+
+def parse_import(uid, text):
+    text = str(text or "").lstrip("\ufeff")
+    if len(text) > 1400000: return {"error": "That file is too big. Please import fewer rows at a time."}
+    lines = text.splitlines(); first = next((l for l in lines if l.strip()), "")
+    delim = max([",", "\t", ";"], key=lambda c: first.count(c))
+    rows = list(csv.reader(io.StringIO(text), delimiter=delim))
+    cmap = {"date": 0, "ex": 1, "p": 2, "s": 3, "side": 4, "equipment": 5, "damper": 6, "note": 7}; start = 0
+    if rows:
+        hk = [colkey(h) for h in rows[0]]
+        if "date" in hk and "ex" in hk: cmap = {k: i for i, k in enumerate(hk) if k and k not in {}}; cmap = {k: hk.index(k) for k in set(hk) if k}; start = 1
+    data = [(i + 1, r) for i, r in enumerate(rows) if i >= start and any(c.strip() for c in r) and not (r[0].strip().startswith("#"))]
+    if len(data) > MAX_IMPORT_ROWS: return {"error": f"That's {len(data)} rows. Please import at most {MAX_IMPORT_ROWS:,} rows at a time and split the rest into another file."}
+    if not data: return {"error": "We couldn't find any rows. Paste rows or choose a CSV file that has a Date and an Exercise column."}
+    return {"data": data, "cmap": cmap}
+
+def run_import(uid, b, confirm):
+    pr = parse_import(uid, b.get("text"))
+    if "error" in pr: return pr
+    fixes = {}
+    for k, v in (b.get("fixes") or {}).items():
+        try: fixes[int(k)] = int(v)
+        except Exception: pass
+    exrows = db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE active=1 ORDER BY sort,id").fetchall()
+    exs = {r[0]: ex_row(r) for r in exrows}; cands = [(i, e["name"], norm(e["name"])) for i, e in exs.items()]
+    existing = set()
+    for eid, day, pv, sv, sel in db.execute("SELECT exercise_id,day,pval,sval,selectors FROM results WHERE user_id=?", (uid,)):
+        existing.add((eid, day, pv, sv, json.dumps(json.loads(sel or "{}"), sort_keys=True)))
+    out = []; ok_rows = []; today_d = today()
+    for rn, r in pr["data"]:
+        g = lambda k: (r[pr["cmap"][k]].strip() if k in pr["cmap"] and pr["cmap"][k] < len(r) else "")
+        row = {"row": rn, "exercise_input": g("ex"), "status": "problem", "suggestions": []}
+        def bad(msg): row["error"] = msg; out.append(row)
+        eid = fixes.get(rn) if fixes.get(rn) in exs else None; sug = []
+        if eid is None: eid, sug = match_exercise(g("ex"), cands)
+        if eid is None:
+            row["suggestions"] = sug
+            if not g("ex"): bad("There's no exercise name on this row.")
+            else: bad(f"We couldn't find an exercise called \"{g('ex')[:60]}\"." + (f" Did you mean {sug[0]['name']}?" if sug else " Please choose the right one."))
+            continue
+        e = exs[eid]; d = e["def"]; row.update(exercise_id=eid, exercise=e["name"])
+        dy = parse_date(g("date"))
+        if not dy: bad(f"We couldn't read the date \"{g('date')[:30]}\". Try 2025-03-14 or 3/14/2025."); continue
+        if dy > today_d or dy < date(2000, 1, 1): bad("That date is in the future or too long ago. Please check it."); continue
+        row["day"] = dy.isoformat()
+        def val(m, cell, required):
+            if not cell.strip():
+                return (None, None) if not required else (None, f"Please fill in the result for {e['name']}.")
+            v = parse_time_cell(cell) if m["type"] == "time" else parse_num_cell(cell)
+            if v is None: return None, f"We couldn't read the result \"{cell[:30]}\"." + (" Use minutes and seconds like 8:42." if m["type"] == "time" else " Please use a number.")
+            return parse_measure(m, v, required)
+        p, err = val(d["primary"], g("result") if False else g("p"), True)
+        if err: bad(err); continue
+        s = None
+        if d.get("secondary") and g("s"):
+            s, err = val(d["secondary"], g("s"), False)
+            if err: bad(err); continue
+        elif d.get("secondary") and not d["secondary"].get("optional", True): bad(f"Please add the second result ({d['secondary']['label']})."); continue
+        sel = {}; err = None
+        for x in d["selectors"]:
+            raw = g("equipment") if x["key"] == "equipment" else g("damper") if x["key"] == "damper" else g("side")
+            if not raw:
+                if x["required"]: err = f"Please add: {x['label']} ({' / '.join(x['options'])})."; break
+                continue
+            o = match_option(x["options"], raw)
+            if not o: err = f"\"{raw[:20]}\" isn't one of the choices for {x['label']}. Use: {' / '.join(x['options'])}."; break
+            sel[x["key"]] = o
+        if err: bad(err); continue
+        note = g("note")
+        if re.match(r"^'[=+\-@]", note): note = note[1:]
+        row.update(p=p, s=s, sel=sel, note=clean(note, 500))
+        key = (eid, row["day"], p, s, json.dumps(sel, sort_keys=True))
+        if key in existing: row["status"] = "duplicate"
+        else: row["status"] = "ok"; existing.add(key); ok_rows.append(row)
+        out.append(row)
+    counts = {k: sum(1 for x in out if x["status"] == k) for k in ("ok", "duplicate", "problem")}
+    if not confirm: return {"rows": out, "counts": counts}
+    now = time.time(); db.execute("BEGIN")
+    try:
+        for x in ok_rows:
+            db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?)", (uid, x["exercise_id"], x["day"], x["p"], x["s"], json.dumps(x["sel"]), x["note"], now))
+            db.execute("INSERT OR IGNORE INTO tracked VALUES(?,?,?)", (uid, x["exercise_id"], now))
+        db.execute("COMMIT")
+    except Exception:
+        db.execute("ROLLBACK"); return {"error": "Something went wrong and nothing was imported. Please try again."}
+    return {"imported": len(ok_rows), "counts": counts, "newBadges": evaluate_badges(uid) if ok_rows else []}
 
 # ---------- handler ----------
 class H(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     def log_message(self, *a): pass
-    def send(self, code, obj, ctype="application/json", cookie=None):
+    def send(self, code, obj, ctype="application/json", cookie=None, extra=None):
         b = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", ctype); self.send_header("Content-Length", str(len(b)))
         self.send_header("Cache-Control", "no-store"); self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "same-origin")
         if cookie: self.send_header("Set-Cookie", cookie)
+        for k, v in (extra or {}).items(): self.send_header(k, v)
         self.end_headers(); self.wfile.write(b)
     def body(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if n > 200000: return {}
+        if n > 1500000: return {}
         try: return json.loads(self.rfile.read(n) or b"{}")
         except Exception: return {}
     def user(self):
@@ -253,6 +451,9 @@ class H(http.server.BaseHTTPRequestHandler):
             if p == "/api/exercises": return self.send(200, self.library(usr))
             if p == "/api/home": return self.send(200, self.home(usr))
             if p == "/api/badges": return self.send(200, self.badges(usr))
+            if p == "/api/import/template": return self.send(200, import_template().encode("utf-8-sig"), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="gymnazo-results-template.csv"'})
+            if p == "/api/import/reference": return self.send(200, import_reference().encode("utf-8-sig"), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="gymnazo-exercise-names.csv"'})
+            if p == "/api/export.csv": return self.send(200, export_csv(usr[0]).encode("utf-8-sig"), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="my-gymnazo-results.csv"'})
             if p == "/api/metric":
                 try: eid = int(q.get("exercise_id", [0])[0])
                 except Exception: return self.send(400, {"error": "bad request"})
@@ -288,11 +489,15 @@ class H(http.server.BaseHTTPRequestHandler):
                     item["latest"] = {"day": last["day"], "value": g["latest"]["value"], "series": g["label"], "p": last["p"], "s": last["s"], "sel": last["sel"]}
                     item["best"] = g["best"]["value"]; item["trend"] = g["trend"]
                     item["isBest"] = g["latest"]["id"] == g["best"]["id"] and g["count"] > 1
+                    item["spark"] = [r["h"] for r in res if r["series"] == last["series"] and r["h"] is not None][-14:]
+                    item["better"] = better_of(ex["def"])
+                    item["lastLogged"] = max(r["created"] for r in res)
                 age = (now - date.fromisoformat(last["day"])).days
                 if age >= 90: retest.append({"id": eid, "name": ex["name"], "days": age})
             items.append(item)
         hidden = db.execute("SELECT hide_nudge_until FROM users WHERE id=?", (uid,)).fetchone()[0] > time.time()
-        return {"metrics": items, "retest": [] if hidden else retest}
+        recent = [{"id": m["id"], "name": m["name"]} for m in sorted([m for m in items if m.get("lastLogged")], key=lambda m: -m["lastLogged"])[:5]]
+        return {"metrics": items, "retest": [] if hidden else retest, "recent": recent}
 
     def metric(self, usr, eid):
         ex = get_ex(eid)
@@ -325,6 +530,10 @@ class H(http.server.BaseHTTPRequestHandler):
             if p == "/api/results": return self.add_result(usr, b)
             if p == "/api/results/update": return self.update_result(usr, b)
             if p == "/api/results/delete": return self.delete_result(usr, b)
+            if p == "/api/results/note": return self.set_note(usr, b)
+            if p in ("/api/import/preview", "/api/import/confirm"):
+                r = run_import(usr[0], b, p.endswith("confirm"))
+                return self.send(400 if "error" in r else 200, r)
             if p == "/api/nudge/hide":
                 db.execute("UPDATE users SET hide_nudge_until=? WHERE id=?", (time.time() + 30 * 86400, usr[0])); return self.send(200, {"ok": 1})
             if p == "/api/account/delete": return self.delete_account(usr, b)
@@ -432,6 +641,12 @@ class H(http.server.BaseHTTPRequestHandler):
         db.execute("UPDATE results SET day=?,pval=?,sval=?,selectors=?,note=? WHERE id=?", (r["day"], r["p"], r["s"], json.dumps(r["sel"]), r["note"], rid))
         res = load_results(usr[0], row[0]); analyse(ex["def"], res)
         self.send(200, {"id": rid, "pb": self._is_best_now(ex, res, rid), "newBadges": evaluate_badges(usr[0])})
+    def set_note(self, usr, b):
+        try: rid = int(b.get("id"))
+        except Exception: return self.send(400, {"error": "bad request"})
+        n = db.execute("UPDATE results SET note=? WHERE id=? AND user_id=?", (clean(b.get("note"), 500), rid, usr[0])).rowcount
+        if not n: return self.send(404, {"error": "We couldn't find that result."})
+        self.send(200, {"ok": 1})
     def delete_result(self, usr, b):
         try: rid = int(b.get("id"))
         except Exception: return self.send(400, {"error": "bad request"})
@@ -487,6 +702,13 @@ class H(http.server.BaseHTTPRequestHandler):
                     mx = db.execute("SELECT COALESCE(MAX(sort),-1)+1 FROM exercises").fetchone()[0]
                     db.execute("INSERT INTO exercises(name,description,category,sort,active,def) VALUES(?,?,?,?,1,?)", (name, desc, cat, mx, json.dumps(d)))
             return self.send(200, {"dry": bool(b.get("dry")), "added": [a[0] for a in added], "skipped": skipped, "bad": bad})
+        if p == "/api/admin/members":  # names only: needed to pick who an import is for
+            return self.send(200, {"members": [{"id": r[0], "name": r[1]} for r in db.execute("SELECT id,name FROM users ORDER BY name_key")]})
+        if p in ("/api/admin/import-preview", "/api/admin/import-confirm"):
+            try: uid = int(b.get("user_id"))
+            except Exception: return self.send(400, {"error": "Please choose a member."})
+            if not db.execute("SELECT 1 FROM users WHERE id=?", (uid,)).fetchone(): return self.send(404, {"error": "We couldn't find that member."})
+            r = run_import(uid, b, p.endswith("confirm")); return self.send(400 if "error" in r else 200, r)
         if p == "/api/admin/reorder":
             for i, x in enumerate(b.get("ids", [])):
                 try: db.execute("UPDATE exercises SET sort=? WHERE id=?", (i, int(x)))

@@ -9,6 +9,14 @@ A private, simple web app for Gymnazo members to track their own ability and cap
 - Built for members over 40: 56px+ tap targets, 18px+ text, plain language.
 - Branding based on gymnazo.com: brand orange `#d4631c` (sampled from the site logo), charcoal text, white/warm background, Avenir Next-style font stack, logo from the site, tagline "Train for the decades ahead" / "Move With Confidence".
 
+## Search, graphs, notes, import (v2)
+- Always-visible search bar on every logged-in screen searches the whole library (name, description, category); Enter opens the first hit, Esc closes. "My metrics" also has search, a category filter and a "recently used" row.
+- Every exercise page has a graph: date axis, tappable points (value, date, note), personal-best marker, dashed trend line, First/Latest/Best/Results tiles, 3 months / 1 year / All time, a Compare-all toggle for side/equipment lines, correct lower-is-better handling and mm:ss times. Cards show a sparkline and a "See graph" button.
+- Every result has a private note (up to 500 characters), editable any time from the results list or the chart popup.
+- Import past results (Me tab or My Progress): download the CSV template, fill in, upload or paste, preview, fix names with a dropdown, confirm. Results keep their original dates, exercises are auto-tracked, badges are awarded once with one summary. Max 2,000 rows per import. "Download my results (CSV)" exports everything including notes in the same format.
+- CSV columns: `Date, Exercise, Result, Second result (optional), Side / Hand / Foot, Equipment, Damper, Note`.
+- Admin can import a member's history from /admin (choose member by name, preview, confirm). Admin never sees existing scores or notes.
+
 ## Stack
 Python 3 standard library only (`server.py`), single-file front end (`index.html`), SQLite. No CDNs, no dependencies.
 

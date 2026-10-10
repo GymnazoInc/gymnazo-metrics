@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#d4631c">
 <title>Gymnazo Ability &amp; Capacity Metrics</title>
-<!-- app-marker: gymnazo-metrics-v1 -->
+<!-- app-marker: gymnazo-metrics-v2 search-v1 import-v1 graph-v1 notes-v1 -->
 <style>
 :root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next LT Pro','Avenir Next','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -45,10 +45,21 @@ textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;ma
 #toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:var(--navy);color:#fff;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #toast.show{display:block;animation:drop .4s cubic-bezier(.3,1.6,.5,1)}@keyframes drop{from{transform:translateY(-70px);opacity:0}}
 #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.gs{position:fixed;top:0;left:0;right:0;z-index:30;background:#fff;border-bottom:3px solid var(--or);padding:8px 10px;height:72px}.gs input{max-width:640px;display:block;margin:0 auto;min-height:56px;font-size:20px;border-color:var(--or)}
+.gr{position:fixed;top:72px;left:0;right:0;z-index:31;background:#fff;max-height:calc(100vh - 150px);overflow:auto;box-shadow:0 14px 30px rgba(0,0,0,.25);max-width:640px;margin:0 auto;border-radius:0 0 18px 18px}
+.gi{display:block;width:100%;text-align:left;background:#fff;color:var(--ink);border-radius:0;box-shadow:none;border-bottom:1px solid var(--line);min-height:68px;font-weight:500;padding:10px 16px}.gi b{display:block;font-size:20px}.gi:active{background:var(--orl)}.gi2{padding:18px}.tk{color:#1f6b3d;font-weight:700}.ad{color:var(--or2);font-weight:700}
+body.in{padding-top:72px}body.in .top,body.in .head{display:none}body.in nav{top:72px}.ov{top:72px!important}
+.rec{display:flex;gap:8px;overflow-x:auto;padding:8px 0 2px}.rec button{width:auto;white-space:nowrap;min-height:56px;font-size:17px}
+a.btn{display:block;text-align:center;text-decoration:none;font-weight:700;font-size:20px;border-radius:16px;padding:16px 18px;min-height:60px;background:var(--or);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.15)}a.btn.alt{background:#fff;color:var(--or2);border:2px solid var(--or)}
+.spark{flex:none}.leg{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:17px}.leg i{display:inline-block;width:18px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.rng button{flex:1 1 28%;min-height:56px;font-size:18px}.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.tiles>div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center}.tiles b{display:block;font-size:26px;font-family:var(--serif)}.tiles span{display:block}.tiles .pbt{background:#fff3d6;border-color:var(--gold)}
+.pop{margin-top:12px;background:#fffaf6;border:2px solid var(--or);border-radius:16px;padding:12px}.en{padding:12px 0;border-bottom:1px solid var(--line)}.en button,.pop button{width:auto;min-height:56px;padding:6px 16px;font-size:17px}.nt2{white-space:pre-wrap;word-break:break-word;background:#faf6ef;border-radius:12px;padding:8px 10px;margin-top:6px}.row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.hit:focus{outline:3px solid #2b6cb0}
 svg text{font-family:var(--sans)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style></head><body>
 <canvas id="confetti"></canvas><div id="toast" role="status" aria-live="polite"></div>
+<div id="gs" class="gs hide"><input id="gq" type="text" placeholder="🔍 Search all exercises" aria-label="Search all exercises" autocomplete="off" enterkeyhint="search"><div id="gr" class="gr hide" role="listbox"></div></div>
 <div class="top">Move With Confidence</div>
 <div class="head"><img src="/logo.png" alt="Gymnazo"><h1>Ability &amp; Capacity Metrics</h1><p>Train for the decades ahead.</p></div>
 <div id="navw" class="hide"><nav><button data-t="home" class="act"><span class="e">📈</span>My Progress</button><button data-t="lib"><span class="e">🔍</span>Exercises</button><button data-t="badges"><span class="e">🏅</span>Badges</button><button data-t="me"><span class="e">👤</span>Me</button></nav></div>
@@ -94,10 +105,11 @@ function setMode(m){MODE=m;$('choose').classList.add('hide');$('formbox').classL
 $('pickNew').onclick=()=>setMode('new');$('pickOld').onclick=()=>setMode('old');
 $('back').onclick=()=>{$('formbox').classList.add('hide');$('choose').classList.remove('hide');$('lerr').textContent=''};
 $('go').onclick=async()=>{$('lerr').textContent='';const {ok,j}=await api(MODE==='new'?'/api/register':'/api/login',{name:$('name').value,pin:$('pin').value});if(!ok){$('lerr').textContent=j.error||'Something went wrong. Please try again.';return}ME=j;$('pin').value='';await start(j.new)};
-async function logout(){await api('/api/logout',{});ME=null;LIB=null;HOME=null;closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick()}
+function appOff(){document.body.classList.remove('in');$('gs').classList.add('hide');gsClose(true)}
+async function logout(){appOff();await api('/api/logout',{});ME=null;LIB=null;HOME=null;closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick()}
 
 // ---------- app shell ----------
-async function start(isNew){$('login').classList.add('hide');$('app').classList.remove('hide');$('navw').classList.remove('hide');
+async function start(isNew){document.body.classList.add('in');$('gs').classList.remove('hide');$('login').classList.add('hide');$('app').classList.remove('hide');$('navw').classList.remove('hide');
  await Promise.all([loadLib(),loadHome()]);tab('home');
  if(isNew)toast('Welcome, '+ME.name+'! 🌱');if(!ME.picksSaved)openPicker(true)}
 async function loadLib(){const {ok,j}=await api('/api/exercises');if(ok)LIB=j}
@@ -107,21 +119,40 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t
 function bySearch(e,q){q=q.trim().toLowerCase();return !q||(e.name+' '+e.description+' '+e.category).toLowerCase().indexOf(q)>-1}
 
 // ---------- home ----------
-function drawHome(){const H=HOME||{metrics:[],retest:[]};let h=`<div class="card"><h2>Hi, ${esc(ME.name)}! 👋</h2><p class="small" style="margin:0">Only you can see your results.</p></div>`;
+let HQ='',HC='all';
+function spark(m){const v=m.spark||[];if(v.length<2)return '';const lo=Math.min(...v),hi=Math.max(...v),W=110,H=34,r=hi-lo||1;const pts=v.map((x,i)=>{const f=(x-lo)/r;return (4+i*(W-8)/(v.length-1)).toFixed(1)+','+(4+(m.better==='lower'?f:1-f)*(H-8)).toFixed(1)}).join(' ');const last=pts.split(' ').pop().split(',');
+ return `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Small trend line"><polyline points="${pts}" fill="none" stroke="#d4631c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#d4631c"/></svg>`}
+function drawHome(){const H=HOME||{metrics:[],retest:[],recent:[]};let h=`<div class="card"><h2>Hi, ${esc(ME.name)}! 👋</h2><p class="small" style="margin:0">Only you can see your results.</p></div>`;
  if(H.retest.length)h+=`<div class="card" style="background:#fffaf6;border-color:var(--or)"><h3>Ready to test again? 🌿</h3><p class="small">It has been a while. Only if you feel like it:</p>${H.retest.slice(0,3).map(r=>`<div class="er"><div class="t"><b>${esc(r.name)}</b><div class="small">${Math.round(r.days/30)} months ago</div></div><button data-log="${r.id}">Log it</button></div>`).join('')}<button class="ghost" id="hideNudge" style="margin-top:10px">Not now</button></div>`;
- if(!H.metrics.length)h+=`<div class="card"><h2>Let's choose your metrics</h2><p>Pick the exercises you want to follow over time. You can change this any time.</p><button class="big" id="addM">＋ Choose my metrics</button></div>`;
- else{h+=H.metrics.map(m=>{const hmz=hm(m.def);return `<div class="card mc"><span class="chip">${esc(m.category)}</span><div class="nm">${esc(m.name)}</div>`+(m.latest?`<div class="small">Latest · ${esc(fmtDay(m.latest.day))}${m.latest.series?' · '+esc(m.latest.series):''}</div><div class="val">${esc(fmt(hmz,m.latest.value))}</div><div class="small">Best: <b>${esc(fmt(hmz,m.best))}</b> ${m.isBest?'⭐':''} &nbsp; ${arrow(m.trend)}</div>`:`<div class="small">No results yet. Log your first one!</div>`)+`<div class="row"><button data-log="${m.id}">Log a result</button><button class="alt" data-open="${m.id}">My progress</button></div></div>`}).join('')+`<button class="alt big" id="addM">＋ Add metrics</button>`}
- $('t-home').innerHTML=h;
- $('t-home').querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>openLog(+b.dataset.log));
- $('t-home').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openMetric(+b.dataset.open));
- const a=$('addM');if(a)a.onclick=()=>openPicker(false);
+ if(!H.metrics.length)h+=`<div class="card"><h2>Let's choose your metrics</h2><p>Pick the exercises you want to follow over time. You can change this any time.</p><button class="big" id="addM">＋ Choose my metrics</button></div><button class="alt big" id="impB">⬆ Import my past results</button>`;
+ else{if(H.recent&&H.recent.length)h+=`<div class="card"><b>Recently used</b><div class="rec">${H.recent.map(r=>`<button class="alt" data-open="${r.id}">${esc(r.name)}</button>`).join('')}</div></div>`;
+  if(H.metrics.length>=5){const cats=[...new Set(H.metrics.map(m=>m.category))];h+=`<div class="card"><h3>My metrics (${H.metrics.length})</h3><input id="hq" type="text" placeholder="🔍 Search my metrics" aria-label="Search my metrics" value="${esc(HQ)}"><select id="hc" aria-label="Category"><option value="all">All categories</option>${cats.map(c=>`<option ${c===HC?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`}
+  h+=`<div id="hl"></div><button class="alt big" id="addM">＋ Add metrics</button><button class="ghost big" id="impB" style="margin-top:10px">⬆ Import my past results</button>`}
+ $('t-home').innerHTML=h;drawHomeList();
+ const hq=$('hq');if(hq){hq.oninput=e=>{HQ=e.target.value;drawHomeList()};$('hc').onchange=e=>{HC=e.target.value;drawHomeList()}}
+ $('t-home').querySelectorAll('.rec [data-open],.card [data-log]').forEach(b=>{if(b.dataset.open)b.onclick=()=>openMetric(+b.dataset.open);else b.onclick=()=>openLog(+b.dataset.log)});
+ const a=$('addM');if(a)a.onclick=()=>openPicker(false);const ib=$('impB');if(ib)ib.onclick=openImport;
  const hn=$('hideNudge');if(hn)hn.onclick=async()=>{await api('/api/nudge/hide',{});await loadHome();drawHome()}}
+function drawHomeList(){const H=HOME||{metrics:[]};const q=HQ.trim().toLowerCase();const L=H.metrics.filter(m=>(HC==='all'||m.category===HC)&&(!q||(m.name+' '+m.category).toLowerCase().indexOf(q)>-1));const el=$('hl');if(!el)return;
+ el.innerHTML=L.map(m=>{const hmz=hm(m.def);return `<div class="card mc"><span class="chip">${esc(m.category)}</span><div class="nm">${esc(m.name)}</div>`+(m.latest?`<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px"><div><div class="small">Latest · ${esc(fmtDay(m.latest.day))}${m.latest.series?' · '+esc(m.latest.series):''}</div><div class="val">${esc(fmt(hmz,m.latest.value))}</div></div>${spark(m)}</div><div class="small">Best: <b>${esc(fmt(hmz,m.best))}</b> ${m.isBest?'⭐':''} &nbsp; ${arrow(m.trend)}</div>`:`<div class="small">No results yet. Log your first one!</div>`)+`<div class="row"><button data-log="${m.id}">Log a result</button><button class="alt" data-open="${m.id}">📈 See graph</button></div></div>`}).join('')||(H.metrics.length?'<div class="card">No metrics match. Try fewer letters.</div>':'');
+ el.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>openLog(+b.dataset.log));el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openMetric(+b.dataset.open))}
+
+// ---------- global search (always visible) ----------
+function gsResults(){const q=$('gq').value.trim().toLowerCase();if(!q||!LIB)return [];const sc=e=>{const n=e.name.toLowerCase();return n.startsWith(q)?0:n.indexOf(q)>-1?1:e.category.toLowerCase().indexOf(q)>-1?2:3};return LIB.exercises.filter(e=>bySearch(e,q)).sort((a,b)=>sc(a)-sc(b)).slice(0,14)}
+function gsDraw(){const q=$('gq').value.trim(),box=$('gr');if(!q){box.classList.add('hide');return}const R=gsResults();
+ box.innerHTML=R.length?R.map(e=>{const m=HOME&&HOME.metrics.find(x=>x.id===e.id);const st=e.tracked?`<span class="tk">✔ Tracking</span> `+(m&&m.latest?'· Latest: '+esc(fmt(hm(m.def),m.latest.value)):'· No results yet'):`<span class="ad">＋ Add</span>`;return `<button class="gi" data-g="${e.id}"><b>${esc(e.name)}</b><span class="small">${esc(e.category)} · ${st}</span></button>`}).join(''):'<div class="gi2">No exercises match. Try fewer letters.</div>';
+ box.classList.remove('hide');box.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gsOpen(+b.dataset.g))}
+function gsClose(clear){$('gr').classList.add('hide');if(clear)$('gq').value=''}
+function gsOpen(id){gsClose(true);$('gq').blur();openMetric(id)}
+$('gq').oninput=gsDraw;$('gq').onfocus=gsDraw;
+$('gq').onkeydown=e=>{if(e.key==='Enter'){const r=gsResults();if(r.length){e.preventDefault();gsOpen(r[0].id)}}else if(e.key==='Escape'){gsClose(true);$('gq').blur()}};
+document.addEventListener('click',e=>{if(!e.target.closest('#gs'))gsClose(false)});
 
 // ---------- library ----------
 let LQ='';
 function drawLib(){let h=`<div class="card"><h2>Exercises</h2><input id="lq" type="text" placeholder="🔍 Search exercises" aria-label="Search exercises" value="${esc(LQ)}"></div><div id="ll"></div>`;$('t-lib').innerHTML=h;$('lq').oninput=e=>{LQ=e.target.value;drawLibList()};drawLibList()}
 function drawLibList(){const L=LIB.exercises.filter(e=>bySearch(e,LQ));let h='';
- for(const c of LIB.categories){const E=L.filter(e=>e.category===c);if(!E.length)continue;h+=`<div class="cat">${esc(c)}</div>`+E.map(e=>`<div class="ex ${e.tracked?'on':''}"><b>${esc(e.name)}</b><p>${esc(e.description)}</p>${e.tracked?`<div style="display:flex;gap:8px"><button class="alt" data-open="${e.id}">My progress</button><button class="ghost" data-tg="${e.id}" data-v="0">Stop tracking</button></div>`:`<button data-tg="${e.id}" data-v="1">Track this</button>`}</div>`).join('')}
+ for(const c of LIB.categories){const E=L.filter(e=>e.category===c);if(!E.length)continue;h+=`<div class="cat">${esc(c)}</div>`+E.map(e=>`<div class="ex ${e.tracked?'on':''}"><b>${esc(e.name)}</b><p>${esc(e.description)}</p>${e.tracked?`<div style="display:flex;gap:8px"><button class="alt" data-open="${e.id}">📈 See graph</button><button class="ghost" data-tg="${e.id}" data-v="0">Stop tracking</button></div>`:`<button data-tg="${e.id}" data-v="1">Track this</button>`}</div>`).join('')}
  $('ll').innerHTML=h||'<div class="card">No exercises match. Try fewer letters.</div>';
  $('ll').querySelectorAll('[data-tg]').forEach(b=>b.onclick=async()=>{const {ok,j}=await api('/api/track/toggle',{exercise_id:+b.dataset.tg,tracked:b.dataset.v==='1'});if(ok){const e=LIB.exercises.find(x=>x.id===+b.dataset.tg);e.tracked=b.dataset.v==='1';ME.picksSaved=true;await loadHome();drawLibList();toast(e.tracked?'Now tracking '+e.name+' ✔':'Stopped tracking. Your saved results are kept.');celebrate(j.newBadges)}});
  $('ll').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openMetric(+b.dataset.open))}
@@ -141,9 +172,10 @@ function drawPicker(){const L=LIB.exercises.filter(e=>bySearch(e,PKQ));let h='';
 function closeOv(){$('ov').classList.add('hide');$('ovbar').classList.add('hide');$('ov').innerHTML=''}
 
 // ---------- metric page ----------
-let CUR=null,CURS=null;
-async function openMetric(id,keepSeries){const {ok,j}=await api('/api/metric?exercise_id='+id);if(!ok){toast(j.error||'Something went wrong.');return}CUR=j;
- const lastSeries=j.results.length?j.results[j.results.length-1].series:'';if(!keepSeries||!j.series.find(s=>s.label===CURS))CURS=lastSeries;
+let CUR=null,CURS=null,RANGE='all',SELPT=null;
+const PAL=['#d4631c','#2b6cb0','#2e7d4f','#8e44ad','#b8860b','#c0392b'];
+async function openMetric(id,keepSeries){const {ok,j}=await api('/api/metric?exercise_id='+id);if(!ok){toast(j.error||'Something went wrong.');return}CUR=j;SELPT=null;
+ const lastSeries=j.results.length?j.results[j.results.length-1].series:'';if(!keepSeries||(CURS!=='__all__'&&!j.series.find(s=>s.label===CURS)))CURS=lastSeries;if(!keepSeries)RANGE='all';
  $('ov').classList.remove('hide');$('ovbar').classList.add('hide');drawMetric();$('ov').scrollTop=0}
 function improveText(def,s){if(!s||s.count<2)return s&&s.count===1?'Your first result is saved! Test again soon to see your progress.':'';
  const m=hm(def),b=hbetter(def),f=s.first.value,l=s.latest.value,mon=MON[+s.first.day.slice(5,7)-1];
@@ -152,36 +184,65 @@ function improveText(def,s){if(!s||s.count<2)return s&&s.count===1?'Your first r
  if(!better)return 'Your latest is a little lower than your first. That\'s okay. Bodies have ups and downs. Keep going!';
  if(m.type==='time')return b==='lower'?`You're ${mmss(d)} faster since ${mon}! 🎉`:`You've added ${mmss(d)} since ${mon}! 🎉`;
  return `You've improved ${num(d)} ${m.unit||''} since ${mon}! 🎉`}
-function chartSvg(def,rs){const m=hm(def),better=hbetter(def);rs=rs.filter(r=>r.h!=null);if(!rs.length)return '';
- const W=360,Ht=210,L=52,R=14,T=16,B=34;const vals=rs.map(r=>r.h);let lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=lo*.1||1;hi+=hi*.1||1}const pad=(hi-lo)*.12;lo-=pad;hi+=pad;
- const t0=Date.parse(rs[0].day),t1=Date.parse(rs[rs.length-1].day);const X=i=>rs.length===1?(L+(W-L-R)/2):L+(t1===t0?i/(rs.length-1):(Date.parse(rs[i].day)-t0)/(t1-t0))*(W-L-R);
- const Y=v=>{const f=(v-lo)/(hi-lo);return T+(better==='higher'?1-f:f)*(Ht-T-B)};
- const best=rs.reduce((a,r)=>a==null||(better==='higher'?r.h>a.h:r.h<a.h)?r:a,null);
- const pts=rs.map((r,i)=>X(i).toFixed(1)+','+Y(r.h).toFixed(1)).join(' ');
- const yt=[hi-pad,lo+pad];
- let s=`<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Line chart of your results over time" style="width:100%;height:auto;background:#fffaf6;border-radius:14px;border:1px solid var(--line)">`;
- s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${Ht-B}" stroke="#d9d2c8"/><line x1="${L}" y1="${Ht-B}" x2="${W-R}" y2="${Ht-B}" stroke="#d9d2c8"/>`;
- s+=`<text x="${L-6}" y="${Y(yt[0])+5}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(fmt(Object.assign({},m,{unit:m.type==='time'?'min':''}),yt[0]).replace(/ .*/,'')) }</text><text x="${L-6}" y="${Y(yt[1])+5}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(fmt(Object.assign({},m,{unit:m.type==='time'?'min':''}),yt[1]).replace(/ .*/,''))}</text>`;
- s+=`<text x="${L}" y="${Ht-10}" font-size="13" fill="#5b5e68">${esc(fmtDay(rs[0].day).replace(/, \d+$/,''))}</text>`;if(rs.length>1)s+=`<text x="${W-R}" y="${Ht-10}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(fmtDay(rs[rs.length-1].day).replace(/, \d+$/,''))}</text>`;
- s+=`<polyline points="${pts}" fill="none" stroke="#d4631c" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
- rs.forEach((r,i)=>{const isb=r===best;s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="${isb?9:6}" fill="${isb?'#e3b04b':'#fff'}" stroke="#d4631c" stroke-width="3"/>`});
- s+=`<text x="${X(rs.indexOf(best)).toFixed(1)}" y="${Math.max(12,Y(best.h)-14).toFixed(1)}" font-size="14" font-weight="700" text-anchor="middle" fill="#7a4a00">★ Best</text></svg>`;
- return s+`<div class="small" style="margin-top:4px">${better==='lower'?'Higher on the chart means faster (better).':'Higher on the chart means better.'}</div>`}
+const DAYMS=864e5,dms=d=>Date.parse(d+'T00:00:00Z');
+function axisFmt(m,v){return fmt(Object.assign({},m,{unit:m.type==='time'?'min':''}),v).replace(/ .*/,'')}
+function chartSvg(def,groups,better,rangeKey){const m=hm(def);const cut=rangeKey==='3m'?dms(ME.today)-92*DAYMS:rangeKey==='1y'?dms(ME.today)-366*DAYMS:-Infinity;
+ const G=groups.map(g=>({label:g.label,color:g.color,pts:g.pts.filter(r=>dms(r.day)>=cut)})).filter(g=>g.pts.length);const all=G.flatMap(g=>g.pts);
+ if(!all.length)return '<div class="small" style="padding:18px;text-align:center">No results in this time range. Try “All time”.</div>';
+ const W=360,Ht=250,L=54,R=14,T=18,B=40;const vals=all.map(r=>r.h);let lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=Math.abs(lo)*.1||1;hi+=Math.abs(hi)*.1||1}const pad=(hi-lo)*.14;lo-=pad;hi+=pad;
+ const days=all.map(r=>dms(r.day));const t0=Math.min(...days),t1=Math.max(...days);const span=(t1-t0)/DAYMS;
+ const X=r=>t1===t0?(L+(W-L-R)/2):L+((dms(r.day)-t0)/(t1-t0))*(W-L-R);const Y=v=>{const f=(v-lo)/(hi-lo);return T+(better==='higher'?1-f:f)*(Ht-T-B)};
+ let s=`<svg id="chart" viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Line chart of your results over time" style="width:100%;height:auto;background:#fffaf6;border-radius:14px;border:1px solid var(--line);touch-action:manipulation">`;
+ for(let i=0;i<3;i++){const v=(hi-pad)-(i/2)*((hi-pad)-(lo+pad));const y=Y(v);s+=`<line x1="${L}" y1="${y.toFixed(1)}" x2="${W-R}" y2="${y.toFixed(1)}" stroke="#eadfd2" stroke-dasharray="3 4"/><text x="${L-6}" y="${(y+5).toFixed(1)}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(axisFmt(m,v))}</text>`}
+ s+=`<line x1="${L}" y1="${Ht-B}" x2="${W-R}" y2="${Ht-B}" stroke="#d9d2c8"/>`;
+ const nt=t1===t0?1:Math.min(4,Math.max(2,Math.floor(span/20)+2));for(let i=0;i<nt;i++){const t=nt===1?t0:t0+(t1-t0)*i/(nt-1);const d=new Date(t);const lab=span>330?MON[d.getUTCMonth()].slice(0,3)+" '"+String(d.getUTCFullYear()).slice(2):MON[d.getUTCMonth()].slice(0,3)+' '+d.getUTCDate();const x=nt===1?L+(W-L-R)/2:L+(W-L-R)*i/(nt-1);s+=`<text x="${x.toFixed(1)}" y="${Ht-14}" font-size="13" text-anchor="${i===0&&nt>1?'start':i===nt-1&&nt>1?'end':'middle'}" fill="#5b5e68">${lab}</text>`}
+ G.forEach(g=>{const pts=g.pts.map(r=>X(r).toFixed(1)+','+Y(r.h).toFixed(1)).join(' ');
+  if(G.length===1&&g.pts.length>=3){const xs=g.pts.map(r=>(dms(r.day)-t0)/DAYMS),ys=g.pts.map(r=>r.h),n=xs.length,mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;let nu=0,de=0;xs.forEach((x,i)=>{nu+=(x-mx)*(ys[i]-my);de+=(x-mx)*(x-mx)});if(de>0){const k=nu/de,a=xs[0],b=xs[n-1];s+=`<line x1="${X(g.pts[0]).toFixed(1)}" y1="${Y(my+k*(a-mx)).toFixed(1)}" x2="${X(g.pts[n-1]).toFixed(1)}" y2="${Y(my+k*(b-mx)).toFixed(1)}" stroke="#2b6cb0" stroke-width="2.5" stroke-dasharray="7 6" opacity=".7"/>`}}
+  if(g.pts.length>1)s+=`<polyline points="${pts}" fill="none" stroke="${g.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const best=g.pts.reduce((a,r)=>a==null||(better==='higher'?r.h>a.h:r.h<a.h)?r:a,null);
+  g.pts.forEach(r=>{const isb=r===best,sel=SELPT===r.id;s+=`<circle cx="${X(r).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="${isb?9:6}" fill="${isb?'#e3b04b':'#fff'}" stroke="${g.color}" stroke-width="${sel?5:3}"/>`});
+  s+=`<text x="${X(best).toFixed(1)}" y="${Math.max(12,Y(best.h)-14).toFixed(1)}" font-size="14" font-weight="700" text-anchor="middle" fill="#7a4a00">★ Best</text>`;
+  g.pts.forEach(r=>{s+=`<circle class="hit" data-pt="${r.id}" cx="${X(r).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="19" fill="transparent" tabindex="0" role="button" aria-label="Result on ${esc(fmtDay(r.day))}: ${esc(fmt(m,r.h))}" style="cursor:pointer"/>`})});
+ s+='</svg>';
+ if(G.length>1)s+=`<div class="leg">${G.map(g=>`<span><i style="background:${g.color}"></i>${esc(g.label||'All')}</span>`).join('')}</div>`;
+ return s+`<div class="small" style="margin-top:4px">${better==='lower'?'Higher on the chart means faster (better).':'Higher on the chart means better.'}${G.length===1&&G[0].pts.length>=3?' Blue dashed line = your overall trend.':''} Tap a dot to see details.</div>`}
 function selTxt(def,sel){return def.selectors.map(x=>sel[x.key]?esc(sel[x.key]):'').filter(Boolean).join(' · ')}
-function drawMetric(){const j=CUR,d=j.exercise.def,m=hm(d);const ser=j.series.find(s=>s.label===CURS)||j.series[0];
- const rs=j.results.filter(r=>r.series===(ser?ser.label:''));
- let h=`<div class="in"><button class="ghost" id="mb" style="width:auto;margin-bottom:8px">← Back</button><span class="chip">${esc(j.exercise.category)}</span><h2 style="margin-top:6px">${esc(j.exercise.name)}</h2><p class="small">${esc(j.exercise.description)}</p><button class="big" id="ml">Log a new result</button>`;
- if(j.series.length>1)h+=`<div class="card"><b>Show results for:</b><div class="seg" style="margin-top:8px">${j.series.map(s=>`<button data-sr="${esc(s.label)}" class="${s.label===ser.label?'on':''}">${esc(s.label||'All')}</button>`).join('')}</div></div>`;
- if(ser){h+=`<div class="card"><div class="msg">${esc(improveText(d,ser))}</div>${chartSvg(d,rs)}</div><div class="pbcard"><div class="small">⭐ Your personal best${ser.label?' · '+esc(ser.label):''}</div><b>${esc(fmt(m,ser.best.value))}</b><div class="small">${esc(fmtDay(ser.best.day))}</div></div>`;
+function resLine(d,r){return esc(fmt(d.primary,r.p))+(d.secondary&&r.s!=null?' · '+esc(fmt(d.secondary,r.s)):'')}
+function noteBlock(r,id){return `<div class="nt2" id="nb${id}">${r.note?'📝 '+esc(r.note):'<span class="small">No note yet.</span>'}</div><div id="ne${id}"></div><button class="alt" data-nt="${r.id}" style="margin-top:6px">${r.note?'✏️ Edit note':'📝 Add a note'}</button>`}
+function openNoteEditor(rid){const r=CUR.results.find(x=>x.id===rid);const host=document.querySelector('[data-nt="'+rid+'"]').previousElementSibling;host.innerHTML=`<label class="l" for="nx${rid}">Your private note <span class="small">(only you can see it)</span></label><textarea id="nx${rid}" maxlength="500" rows="4" placeholder="How did it feel? Any notes for next time?">${esc(r.note)}</textarea><div class="err" id="nxe${rid}" role="alert"></div><div style="display:flex;gap:8px"><button id="nxs${rid}">Save note</button><button class="ghost" id="nxc${rid}">Cancel</button></div>`;
+ document.querySelector('[data-nt="'+rid+'"]').classList.add('hide');$('nx'+rid).focus();$('nxc'+rid).onclick=drawMetric;
+ $('nxs'+rid).onclick=async()=>{const {ok,j}=await api('/api/results/note',{id:rid,note:$('nx'+rid).value});if(!ok){$('nxe'+rid).textContent=j.error||'Something went wrong.';return}r.note=$('nx'+rid).value.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim().slice(0,500);toast('Note saved ✔');drawMetric()}}
+function drawMetric(){const j=CUR,d=j.exercise.def,m=hm(d),better=j.better;const compare=CURS==='__all__'&&j.series.length>1;
+ const ser=compare?null:(j.series.find(s=>s.label===CURS)||j.series[0]);const hasRes=j.results.length>0;
+ const groups=j.series.filter(s=>compare||s===ser).map((s,i)=>({label:s.label,color:compare?PAL[i%PAL.length]:PAL[0],pts:j.results.filter(r=>r.series===s.label&&r.h!=null)}));
+ let h=`<div class="in"><button class="ghost" id="mb" style="width:auto;margin-bottom:8px">← Back</button><span class="chip">${esc(j.exercise.category)}</span> ${j.tracked?'<span class="chip" style="background:#e3f3e8;color:#1f6b3d">✔ Tracking</span>':''}<h2 style="margin-top:6px">${esc(j.exercise.name)}</h2><p class="small">${esc(j.exercise.description)}</p>`;
+ if(!j.tracked)h+=`<button class="alt big" id="mtk" style="margin-bottom:10px">＋ Track this</button>`;
+ h+=`<button class="big" id="ml">Log a new result</button>`;
+ if(!hasRes)h+=`<div class="card" style="text-align:center"><div style="font-size:48px">📈</div><h3>Log your first result to see your graph</h3><p class="small">It only takes a minute. Your graph grows with every result.</p></div>`;
+ else{if(j.series.length>1)h+=`<div class="card"><b>Show results for:</b><div class="seg" style="margin-top:8px">${j.series.map(s=>`<button data-sr="${esc(s.label)}" class="${!compare&&s.label===ser.label?'on':''}">${esc(s.label||'All')}</button>`).join('')}<button data-sr="__all__" class="${compare?'on':''}">Compare all</button></div></div>`;
+  h+=`<div class="card"><div class="seg rng">${[['3m','3 months'],['1y','1 year'],['all','All time']].map(([k,l])=>`<button data-rg="${k}" class="${RANGE===k?'on':''}">${l}</button>`).join('')}</div>`;
+  if(ser)h+=`<div class="msg">${esc(improveText(d,ser))}</div>`;
+  h+=chartSvg(d,groups,better,RANGE)+`<div id="pp"></div></div>`;
+  if(ser)h+=`<div class="tiles"><div><span class="small">First</span><b>${esc(fmt(m,ser.first.value))}</b><span class="small">${esc(fmtDay(ser.first.day))}</span></div><div><span class="small">Latest</span><b>${esc(fmt(m,ser.latest.value))}</b><span class="small">${esc(fmtDay(ser.latest.day))}</span></div><div class="pbt"><span class="small">⭐ Best</span><b>${esc(fmt(m,ser.best.value))}</b><span class="small">${esc(fmtDay(ser.best.day))}</span></div><div><span class="small">Results</span><b>${ser.count}</b><span class="small">saved</span></div></div>`;
+  else h+=`<div class="tiles"><div><span class="small">Results</span><b>${j.results.length}</b><span class="small">in total</span></div></div>`;
   if(d.headline==='secondary')h+=`<p class="small">Tracking: ${esc(m.label)} at the ${esc(d.primary.label.toLowerCase())} you chose.</p>`}
- else h+=`<div class="card"><p>No results yet. Tap the big button to log your first one. It only takes a minute!</p></div>`;
- h+=`<div class="card"><h3>My results</h3>${j.results.length?[...j.results].reverse().filter(r=>!ser||r.series===ser.label).map(r=>`<div class="er"><div class="t"><b>${esc(fmt(d.primary,r.p))}${d.secondary&&r.s!=null?' · '+esc(fmt(d.secondary,r.s)):''}</b> ${r.isPb?'<span class="star">⭐ Personal best</span>':''}<div class="small">${esc(fmtDay(r.day))}${selTxt(d,r.sel)?' · '+selTxt(d,r.sel):''}${r.note?' · '+esc(r.note):''}</div></div><button class="alt" data-ed="${r.id}">Edit</button></div>`).join(''):'<p class="small">Nothing yet.</p>'}</div>`;
+ h+=`<div class="card"><h3>My results</h3>${hasRes?[...j.results].reverse().filter(r=>compare||!ser||r.series===ser.label).map(r=>`<div class="en"><div><b>${resLine(d,r)}</b> ${r.isPb?'<span class="star">⭐ Personal best</span>':''}</div><div class="small">${esc(fmtDay(r.day))}${selTxt(d,r.sel)?' · '+selTxt(d,r.sel):''}</div>${noteBlock(r,r.id)}<button class="alt" data-ed="${r.id}" style="margin-top:6px">Edit result</button></div>`).join(''):'<p class="small">Nothing yet.</p>'}</div>`;
  h+=j.tracked?`<button class="ghost" id="mt" style="margin-top:6px">Stop tracking this</button><p class="small">Your saved results are kept if you stop.</p>`:'';
  $('ov').innerHTML=h+'</div>';
  $('mb').onclick=async()=>{closeOv();await Promise.all([loadHome(),loadLib()]);tab(TAB)};$('ml').onclick=()=>openLog(j.exercise.id);
- $('ov').querySelectorAll('[data-sr]').forEach(b=>b.onclick=()=>{CURS=b.dataset.sr;drawMetric()});
+ $('ov').querySelectorAll('[data-sr]').forEach(b=>b.onclick=()=>{CURS=b.dataset.sr;SELPT=null;drawMetric()});
+ $('ov').querySelectorAll('[data-rg]').forEach(b=>b.onclick=()=>{RANGE=b.dataset.rg;SELPT=null;drawMetric()});
  $('ov').querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>openLog(j.exercise.id,j.results.find(r=>r.id===+b.dataset.ed)));
- const mt=$('mt');if(mt)mt.onclick=async()=>{await api('/api/track/toggle',{exercise_id:j.exercise.id,tracked:false});toast('Stopped tracking. Your saved results are kept.');await Promise.all([loadHome(),loadLib()]);openMetric(j.exercise.id,true)}}
+ $('ov').querySelectorAll('[data-nt]').forEach(b=>b.onclick=()=>openNoteEditor(+b.dataset.nt));
+ $('ov').querySelectorAll('.hit').forEach(c=>{const f=()=>showPt(+c.dataset.pt);c.onclick=f;c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
+ const mtk=$('mtk');if(mtk)mtk.onclick=async()=>{await api('/api/track/toggle',{exercise_id:j.exercise.id,tracked:true});toast('Now tracking '+j.exercise.name+' ✔');await Promise.all([loadHome(),loadLib()]);openMetric(j.exercise.id,true)};
+ const mt=$('mt');if(mt)mt.onclick=async()=>{await api('/api/track/toggle',{exercise_id:j.exercise.id,tracked:false});toast('Stopped tracking. Your saved results are kept.');await Promise.all([loadHome(),loadLib()]);openMetric(j.exercise.id,true)};
+ if(SELPT)showPt(SELPT,true)}
+function showPt(id,keep){const j=CUR,d=j.exercise.def,r=j.results.find(x=>x.id===id);if(!r)return;SELPT=id;const pp=$('pp');if(!pp)return;
+ pp.innerHTML=`<div class="pop"><b>${resLine(d,r)}</b> ${r.isPb?'<span class="star">⭐ Personal best</span>':''}<div class="small">${esc(fmtDay(r.day))}${selTxt(d,r.sel)?' · '+selTxt(d,r.sel):''}</div><div class="nt2">${r.note?'📝 '+esc(r.note):'<span class="small">No note yet.</span>'}</div><div class="row2"><button class="alt" id="pn">${r.note?'✏️ Edit note':'📝 Add a note'}</button><button class="alt" id="pe">Edit result</button></div><div id="pne"></div></div>`;
+ $('pn').onclick=()=>{$('pne').innerHTML=`<label class="l" for="pnx">Your private note <span class="small">(only you can see it)</span></label><textarea id="pnx" maxlength="500" rows="4" placeholder="How did it feel? Any notes for next time?">${esc(r.note)}</textarea><div class="err" id="pnerr" role="alert"></div><button id="pns">Save note</button>`;$('pnx').focus();$('pns').onclick=async()=>{const {ok,jj}=await api('/api/results/note',{id:r.id,note:$('pnx').value}).then(x=>({ok:x.ok,jj:x.j}));if(!ok){$('pnerr').textContent=jj.error||'Something went wrong.';return}r.note=$('pnx').value.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim().slice(0,500);toast('Note saved ✔');drawMetric()}};
+ $('pe').onclick=()=>openLog(j.exercise.id,r);if(!keep)pp.scrollIntoView({block:'nearest',behavior:RM?'auto':'smooth'});
+ }
 
 // ---------- log form ----------
 let LG=null;
@@ -194,12 +255,12 @@ async function openLog(id,edit){if(!CUR||CUR.exercise.id!==id){const {ok,j}=awai
  d.selectors.forEach(x=>{h+=`<label class="l">${esc(x.label)}${x.required?'':' <span class="small">(if you like)</span>'}</label>`+(x.options.length<=4?`<div class="seg" data-sk="${x.key}">${x.options.map(o=>`<button type="button" data-v="${esc(o)}" class="${LG.sel[x.key]===o?'on':''}">${esc(o)}</button>`).join('')}</div>`:`<select data-sk="${x.key}"><option value="">Choose…</option>${x.options.map(o=>`<option ${LG.sel[x.key]===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`)});
  h+=`<label class="l">${esc(d.primary.label)}</label>${mInput(d.primary,edit?edit.p:null,'pv')}`;
  if(d.secondary)h+=`<label class="l">${esc(d.secondary.label)}${d.secondary.optional?'':''}</label>${mInput(d.secondary,edit&&edit.s!=null?edit.s:null,'sv')}`;
- h+=`<label class="l" for="dy">Date</label><input id="dy" type="date" value="${edit?edit.day:ME.today}" max="${ME.today}"><label class="l" for="nt">Note <span class="small">(if you like)</span></label><textarea id="nt" maxlength="300" placeholder="How did it feel?">${edit?esc(edit.note):''}</textarea><div class="err" id="le" role="alert"></div>`+(edit?`<button class="danger" id="ld" style="margin-top:10px">Delete this result</button>`:'')+`</div>`;
+ h+=`<label class="l" for="dy">Date</label><input id="dy" type="date" value="${edit?edit.day:ME.today}" max="${ME.today}"><label class="l" for="nt">Your private note <span class="small">(only you can see it)</span></label><textarea id="nt" maxlength="500" rows="5" placeholder="How did it feel? Any notes for next time?">${edit?esc(edit.note):''}</textarea><div class="small" id="nc"></div><div class="err" id="le" role="alert"></div>`+(edit?`<button class="danger" id="ld" style="margin-top:10px">Delete this result</button>`:'')+`</div>`;
  $('ov').innerHTML=h;$('ovbar').innerHTML=`<div class="in2"><button id="lsv" class="big" style="min-height:68px">${edit?'Save changes':'Save my result'}</button></div>`;$('ov').classList.remove('hide');$('ovbar').classList.remove('hide');$('ov').scrollTop=0;
  $('lb').onclick=()=>{$('ovbar').classList.add('hide');openMetric(id,true)};
  $('ov').querySelectorAll('.seg[data-sk]').forEach(sg=>sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{LG.sel[sg.dataset.sk]=b.dataset.v;sg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}));
  $('ov').querySelectorAll('select[data-sk]').forEach(s=>s.onchange=()=>LG.sel[s.dataset.sk]=s.value);
- $('lsv').onclick=saveLog;const ld=$('ld');if(ld)ld.onclick=async()=>{if(!confirm('Delete this result? This cannot be undone.'))return;const {ok,j}=await api('/api/results/delete',{id:edit.id});if(ok){toast('Result deleted.');$('ovbar').classList.add('hide');openMetric(id,true)}else $('le').textContent=j.error||'Something went wrong.'}}
+ $('lsv').onclick=saveLog;$('nt').oninput=()=>{const n=500-$('nt').value.length;$('nc').textContent=n<=60?n+' characters left':''};const ld=$('ld');if(ld)ld.onclick=async()=>{if(!confirm('Delete this result? This cannot be undone.'))return;const {ok,j}=await api('/api/results/delete',{id:edit.id});if(ok){toast('Result deleted.');$('ovbar').classList.add('hide');openMetric(id,true)}else $('le').textContent=j.error||'Something went wrong.'}}
 async function saveLog(){const d=CUR.exercise.def;$('le').textContent='';const pv=mVal(d.primary,'pv'),sv=d.secondary?mVal(d.secondary,'sv'):'';
  const body={exercise_id:LG.id,primary:pv,secondary:sv,selectors:LG.sel,day:$('dy').value,note:$('nt').value};if(LG.edit)body.id=LG.edit.id;
  const {ok,j}=await api(LG.edit?'/api/results/update':'/api/results',body);if(!ok){$('le').textContent=j.error||'Something went wrong. Please try again.';return}
@@ -207,12 +268,39 @@ async function saveLog(){const d=CUR.exercise.def;$('le').textContent='';const p
  if(j.pb){toast('⭐ New personal best! Wonderful work!');confetti(180)}else toast(LG.edit?'Changes saved ✔':'Result saved ✔ Great job!');celebrate(j.newBadges,j.pb)}
 function celebrate(nb,pb){if(!nb||!nb.length)return;const go=()=>{toast('🏅 New badge: '+nb[0].title+(nb.length>1?' (+'+(nb.length-1)+' more)':''));confetti(220)};if(pb)setTimeout(go,3600);else go()}
 
+// ---------- import my past results ----------
+let IMP=null;
+function openImport(){IMP={text:'',fixes:{}};
+ $('ov').innerHTML=`<div class="in"><button class="ghost" id="ib" style="width:auto;margin-bottom:8px">← Back</button><h2>Import my past results</h2><p>Have results written down from before? Bring them in with their original dates. Only you can see them.</p>
+ <div class="card"><h3>Step 1 · Get the template</h3><p class="small">A spreadsheet file with example rows. Replace the examples with your own results.</p><a class="btn" href="/api/import/template" download>⬇ Download the template (CSV)</a><a class="btn alt" href="/api/import/reference" download style="margin-top:10px">📋 List of exercise names</a></div>
+ <div class="card"><h3>Step 2 · Fill it in</h3><p class="small">Dates like 2025-03-14, 3/14/2025 or March 14 2025. Times like 8:42 or 1:02:03. Using Excel or Google Sheets? Choose <b>File → Save as / Download → CSV</b> when you are done.</p></div>
+ <div class="card"><h3>Step 3 · Choose your file</h3><input id="if" type="file" accept=".csv,.txt,text/csv,text/plain" aria-label="Choose your CSV file" style="font-size:18px;width:100%;min-height:56px"><p class="small" style="margin:12px 0 4px">Or paste your rows here:</p><textarea id="it" rows="6" placeholder="Date, Exercise, Result, …" aria-label="Paste your rows"></textarea><div class="err" id="ie" role="alert"></div><button class="big" id="ip">Preview what will be imported</button><p class="small">Nothing is saved until you press the big Import button on the next screen.</p></div></div>`;
+ $('ov').classList.remove('hide');$('ovbar').classList.add('hide');$('ov').scrollTop=0;
+ $('ib').onclick=()=>{closeOv();tab(TAB)};
+ $('if').onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size>1400000){$('ie').textContent='That file is too big. Please split it into smaller files.';return}const r=new FileReader();r.onload=()=>{$('it').value=r.result;$('ie').textContent=''};r.readAsText(f)};
+ $('ip').onclick=()=>{IMP.text=$('it').value;IMP.fixes={};previewImport()}}
+async function previewImport(){const {ok,j}=await api('/api/import/preview',{text:IMP.text,fixes:IMP.fixes});if(!ok){if($('ie'))$('ie').textContent=j.error||'Something went wrong.';else toast(j.error||'Something went wrong.');return}IMP.res=j;drawImportPreview()}
+function impExLabel(id){const e=LIB.exercises.find(x=>x.id===id);return e?e:null}
+function impVal(r){const e=impExLabel(r.exercise_id);if(!e)return '';const d=e.def;return fmt(d.primary,r.p)+(d.secondary&&r.s!=null?' · '+fmt(d.secondary,r.s):'')+(Object.values(r.sel||{}).length?' · '+Object.values(r.sel).join(' · '):'')}
+let IMPALL=false;
+function drawImportPreview(){const R=IMP.res,rows=R.rows,ok=rows.filter(r=>r.status==='ok'),pr=rows.filter(r=>r.status==='problem'),du=rows.filter(r=>r.status==='duplicate');const y=$('ov').scrollTop;
+ let h=`<div class="in"><button class="ghost" id="ib" style="width:auto;margin-bottom:8px">← Back</button><h2>Check before importing</h2><div class="card"><div class="val" style="font-size:26px">✔ ${ok.length} ready to import</div>${pr.length?`<div style="color:#a5530f;font-weight:700">⚠ ${pr.length} need a fix (or will be skipped)</div>`:''}${du.length?`<div class="small">↺ ${du.length} already saved, will be skipped</div>`:''}<p class="small" style="margin-bottom:0">Nothing has been saved yet.</p></div>`;
+ if(pr.length)h+=`<div class="card"><h3>Rows to fix</h3>${pr.map(r=>`<div class="er" style="display:block"><b>Row ${r.row}</b> · ${esc(r.error)}${r.exercise_input||r.exercise?'':''}<select data-fx="${r.row}" aria-label="Choose the exercise for row ${r.row}"><option value="">Choose the right exercise…</option>${(r.suggestions||[]).length?`<optgroup label="Did you mean">${r.suggestions.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</optgroup>`:''}<optgroup label="All exercises">${LIB.exercises.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</optgroup></select><div class="small">Other problems (dates, numbers) must be fixed in your file. Rows you leave alone are skipped.</div></div>`).join('')}</div>`;
+ if(ok.length){const shown=IMPALL?ok:ok.slice(0,12);h+=`<div class="card"><h3>Will be imported</h3>${shown.map(r=>`<div class="er"><div class="t"><b>${esc(r.exercise)}</b> · ${esc(impVal(r))}<div class="small">${esc(fmtDay(r.day))}${r.note?' · 📝 '+esc(r.note):''}</div></div></div>`).join('')}${ok.length>12&&!IMPALL?`<button class="alt" id="isa" style="margin-top:10px">Show all ${ok.length}</button>`:''}</div>`}
+ if(du.length)h+=`<div class="card"><h3>Already saved (skipped)</h3><p class="small">${du.slice(0,8).map(r=>esc(r.exercise)+' on '+esc(fmtDay(r.day))).join('; ')}${du.length>8?' and '+(du.length-8)+' more':''}</p></div>`;
+ $('ov').innerHTML=h+'</div>';$('ovbar').innerHTML=`<div class="in2"><button id="ic" class="big" ${ok.length?'':'disabled style="opacity:.5"'}>Import ${ok.length} result${ok.length===1?'':'s'}</button></div>`;$('ovbar').classList.remove('hide');$('ov').scrollTop=y;
+ $('ib').onclick=()=>{$('ovbar').classList.add('hide');openImport()};const isa=$('isa');if(isa)isa.onclick=()=>{IMPALL=true;drawImportPreview()};
+ $('ov').querySelectorAll('[data-fx]').forEach(s=>s.onchange=()=>{if(s.value){IMP.fixes[s.dataset.fx]=+s.value;previewImport()}});
+ $('ic').onclick=async()=>{if(!ok.length)return;$('ic').disabled=true;$('ic').textContent='Importing…';const {ok:o,j}=await api('/api/import/confirm',{text:IMP.text,fixes:IMP.fixes});if(!o){toast(j.error||'Something went wrong.');$('ic').disabled=false;return}
+  $('ovbar').classList.add('hide');await Promise.all([loadLib(),loadHome()]);importDone(j)}}
+function importDone(j){confetti(160);$('ov').innerHTML=`<div class="in"><div class="card" style="text-align:center"><div style="font-size:56px">🎉</div><h2>All done!</h2><p style="font-size:22px">We imported <b>${j.imported}</b> result${j.imported===1?'':'s'}.</p><p class="small">${j.counts.duplicate?j.counts.duplicate+' already saved were skipped. ':''}${j.counts.problem?j.counts.problem+' rows were skipped because of problems.':''}</p>${j.newBadges.length?`<h3>New badges</h3><div class="bg">${j.newBadges.map(b=>`<div class="bd got"><span class="ic">${b.icon}</span><b>${esc(b.title)}</b>${esc(b.desc)}</div>`).join('')}</div>`:''}<button class="big" id="idn" style="margin-top:16px">See my progress</button></div></div>`;$('idn').onclick=()=>{closeOv();tab('home')}}
+
 // ---------- badges / me ----------
 async function drawBadges(){$('t-badges').innerHTML='<div class="card">Loading…</div>';const {j}=await api('/api/badges');const B=j.badges||[],n=B.filter(b=>b.earned).length;
  $('t-badges').innerHTML=`<div class="card"><h2>My Badges 🏅</h2><p class="small" style="margin:0">${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>`<div class="bd ${b.earned?'got':''}"><span class="ic">${b.earned?b.icon:'🔒'}</span><b>${esc(b.title)}</b>${esc(b.desc)}${b.earned?'<div class="small">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`).join('')}</div>`}
-function drawMe(){$('t-me').innerHTML=`<div class="card"><h2>${esc(ME.name)}</h2><p class="small">Your results are private. No one else can see them, and there are no leaderboards.</p><button id="lo" class="alt">Log out</button></div><div class="card"><h3>Delete my account and data</h3><p class="small">This removes your account, your results and your badges for good.</p><button class="danger" id="da">Delete my account and data</button><div id="dc" class="hide"><label class="l" for="dp">Type your 4-digit PIN to confirm</label><input id="dp" type="tel" inputmode="numeric" maxlength="4" style="-webkit-text-security:disc"><div class="err" id="de" role="alert"></div><button class="danger" id="dy2">Yes, delete everything</button><button class="ghost" id="dn" style="margin-top:8px">No, keep my account</button></div></div>`;
- $('lo').onclick=logout;$('da').onclick=()=>{$('dc').classList.remove('hide');$('da').classList.add('hide');$('dp').focus()};$('dn').onclick=()=>{$('dc').classList.add('hide');$('da').classList.remove('hide')};
- $('dy2').onclick=async()=>{const {ok,j}=await api('/api/account/delete',{pin:$('dp').value});if(!ok){$('de').textContent=j.error||'Something went wrong.';return}ME=null;$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick();toast('Your account and data were deleted.')}}
+function drawMe(){$('t-me').innerHTML=`<div class="card"><h2>${esc(ME.name)}</h2><p class="small">Your results are private. No one else can see them, and there are no leaderboards.</p><button id="lo" class="alt">Log out</button></div><div class="card"><h3>My results file</h3><p class="small">Bring in past results, or save a copy of all your results (with your notes) as a spreadsheet file.</p><button id="mi" class="big">⬆ Import my past results</button><a class="btn alt" href="/api/export.csv" download style="margin-top:10px">⬇ Download my results (CSV)</a></div><div class="card"><h3>Delete my account and data</h3><p class="small">This removes your account, your results and your badges for good.</p><button class="danger" id="da">Delete my account and data</button><div id="dc" class="hide"><label class="l" for="dp">Type your 4-digit PIN to confirm</label><input id="dp" type="tel" inputmode="numeric" maxlength="4" style="-webkit-text-security:disc"><div class="err" id="de" role="alert"></div><button class="danger" id="dy2">Yes, delete everything</button><button class="ghost" id="dn" style="margin-top:8px">No, keep my account</button></div></div>`;
+ $('lo').onclick=logout;$('mi').onclick=openImport;$('da').onclick=()=>{$('dc').classList.remove('hide');$('da').classList.add('hide');$('dp').focus()};$('dn').onclick=()=>{$('dc').classList.add('hide');$('da').classList.remove('hide')};
+ $('dy2').onclick=async()=>{const {ok,j}=await api('/api/account/delete',{pin:$('dp').value});if(!ok){$('de').textContent=j.error||'Something went wrong.';return}ME=null;appOff();closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick();toast('Your account and data were deleted.')}}
 
 // ---------- confetti ----------
 function confetti(n){if(RM)return;const c=$('confetti'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;const cols=['#d4631c','#e3b04b','#ffffff','#0f1b3d','#f6d68b'];

@@ -63,6 +63,78 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));let pass=0,fail=0;const ok=(n,c
  await ev(`tab('badges')`);await sleep(800);await shot('9-badges',true);
  ok('badges earned shown',await ev(`document.querySelectorAll('.bd.got').length`)>=3,await ev(`document.querySelectorAll('.bd.got').length`));
  await ev(`tab('me')`);await sleep(200);await shot('10-me-delete-account');
+ // ===== v2: global search, import, charts, notes =====
+ const KEY=(sel,k)=>ev(`document.querySelector('${sel}').dispatchEvent(new KeyboardEvent('keydown',{key:'${k}',bubbles:true}))`);
+ const txt=sel=>ev(`(document.querySelector('${sel}')||{}).textContent||''`);
+ await ev(`tab('home')`);await sleep(300);
+ ok('search bar visible on home',await ev(`getComputedStyle(document.getElementById('gs')).display!=='none'&&document.getElementById('gs').getBoundingClientRect().top===0`));
+ await T('#gq','jump');await sleep(200);
+ let gr=await txt('#gr');ok('global search lists non-tracked exercises with Add label',gr.includes('Box Jump')&&gr.includes('Add'),gr);
+ await shot('11-search-dropdown');
+ await KEY('#gq','Enter');await sleep(900);
+ ok('Enter opens first result page',await ev(`!!document.getElementById('ml')&&!!document.getElementById('mtk')`));
+ ok('search still visible on the exercise page (overlay)',await ev(`document.getElementById('gs').getBoundingClientRect().height>0&&document.getElementById('gq').value===''`));
+ ok('empty-state message for no results yet',(await txt('#ov')).includes('Log your first result to see your graph'));
+ await C('#mtk');await sleep(900);ok('Track this -> tracking',await ev(`LIB.exercises.find(e=>e.tracked&&/Box Jump|Triple|Anterior/.test(e.name))!==undefined`));
+ await T('#gq','mile');await sleep(200);ok('search from overlay finds tracked item with Tracking label',(await txt('#gr')).includes('Tracking'));
+ await KEY('#gq','Escape');await sleep(100);ok('Esc closes and clears',await ev(`document.getElementById('gr').classList.contains('hide')&&document.getElementById('gq').value===''`));
+ await T('#gq','power & jumps');await sleep(200);ok('search matches category',(await txt('#gr')).includes('Keiser'));await KEY('#gq','Escape');
+ // log from non-tracked via search: Pull-ups
+ await T('#gq','pull');await sleep(150);await ev(`document.querySelector('#gr [data-g]').click()`);await sleep(800);
+ await C('#ml');await sleep(600);await T('#pv','7');await C('#lsv');await sleep(1200);
+ ok('non-tracked -> track/log works, point saved',await ev(`CUR.results.length===1&&CUR.tracked===true`));
+ ok('single data point chart renders (no line)',await ev(`!!document.querySelector('#chart')&&!document.querySelector('#chart polyline')&&!!document.querySelector('#chart .hit')`));
+ await shot('12-single-point-chart',true);
+ await ev(`document.getElementById('mb').click()`);await sleep(800);
+ // home filters (>=5 tracked)
+ ok('home shows search+category filter',await ev(`!!document.getElementById('hq')&&!!document.getElementById('hc')`));
+ await T('#hq','mile');await sleep(200);ok('home filter narrows list',await ev(`document.querySelectorAll('#hl .mc').length`)===1);
+ await T('#hq','');await ev(`(()=>{const s=document.getElementById('hc');s.value='Bodyweight';s.dispatchEvent(new Event('change'))})()`);await sleep(200);ok('category filter',await ev(`[...document.querySelectorAll('#hl .mc .chip')].every(c=>c.textContent==='Bodyweight')&&document.querySelectorAll('#hl .mc').length>=1`));
+ await ev(`(()=>{const s=document.getElementById('hc');s.value='all';s.dispatchEvent(new Event('change'))})()`);
+ ok('recently used row + See graph button + sparkline',await ev(`!!document.querySelector('.rec button')&&[...document.querySelectorAll('#hl button')].some(b=>/See graph/.test(b.textContent))&&!!document.querySelector('#hl .spark')`));
+ // import flow
+ const before=await ev(`fetch('/api/home').then(r=>r.json()).then(h=>h.metrics.length)`);
+ let rows=['Date,Exercise,Result,Second result (optional),Side / Hand / Foot,Equipment,Damper,Note'];
+ const mk=(n,eq,base,step)=>{for(let i=0;i<n;i++){const d=new Date(Date.UTC(2023,9,1)+i*(i%3===0?23:41)*864e5);if(d>new Date(Date.UTC(2026,9,9)))break;rows.push(`${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()},Deadlift,${base+Math.round(i*step)},,,${eq},,${i%7===0?'Felt great <b>today</b>':''}`)}};
+ mk(32,'Barbell',135,4);mk(14,'ViPR',60,2.5);rows.push('2025-02-02,Dedlift,200,,,Barbell,,typo name row','2025-02-03,Mile,9:10,,,,,');
+ await ev(`openImport()`);await sleep(300);await T('#it',rows.join('\n'));await C('#ip');await sleep(1200);
+ ok('preview screen shows counts and fix dropdown for typo',(await txt('#ov')).includes('ready to import')&&await ev(`!!document.querySelector('[data-fx]')`));
+ ok('nothing saved before confirm',await ev(`fetch('/api/home').then(r=>r.json()).then(h=>h.metrics.length)`)===before);
+ await shot('13-import-preview',true);
+ await ev(`(()=>{const s=document.querySelector('[data-fx]');s.value=String(LIB.exercises.find(e=>e.name==='Deadlift').id);s.dispatchEvent(new Event('change'))})()`);await sleep(1000);
+ ok('fix applied -> no more problems in preview',!(await txt('#ov')).includes('Rows to fix'));
+ const nready=await ev(`IMP.res.counts.ok`);ok('confirm button label has count',(await txt('#ic')).includes('Import '+nready));
+ await C('#ic');await sleep(2500);
+ ok('single celebration summary screen',(await txt('#ov')).includes('All done')&&(await txt('#ov')).includes('We imported'));
+ await shot('14-import-done',true);
+ await C('#idn');await sleep(600);
+ const dl=await ev(`LIB.exercises.find(e=>e.name==='Deadlift').id`);
+ await ev(`openMetric(${dl})`);await sleep(900);
+ ok('imported history: compare chips for equipment series + range chips',await ev(`!![...document.querySelectorAll('[data-sr]')].find(b=>b.dataset.sr==='__all__')&&document.querySelectorAll('[data-rg]').length===3`));
+ const npts=await ev(`document.querySelectorAll('#chart .hit').length`);ok('many points plotted ('+npts+')',npts>=25);
+ ok('trend line (dashed) with 3+ points',await ev(`!!document.querySelector('#chart line[stroke-dasharray="7 6"]')`));
+ ok('tiles: First/Latest/Best/Results',(await txt('.tiles')).includes('First')&&(await txt('.tiles')).includes('Best')&&(await txt('.tiles')).includes('Results'));
+ await shot('15-chart-imported-history',true);
+ await ev(`document.querySelector('[data-sr="__all__"]').click()`);await sleep(300);ok('compare mode draws 2 colored lines + legend',await ev(`document.querySelectorAll('#chart polyline').length===2&&!!document.querySelector('.leg')`));
+ await shot('16-chart-compare-series',true);
+ await ev(`document.querySelector('[data-sr="Barbell"]').click()`);await sleep(300);
+ const all=await ev(`document.querySelectorAll('#chart .hit').length`);await ev(`document.querySelector('[data-rg="3m"]').click()`);await sleep(300);
+ const m3=await ev(`document.querySelectorAll('#chart .hit').length`);await ev(`document.querySelector('[data-rg="1y"]').click()`);await sleep(300);const y1=await ev(`document.querySelectorAll('#chart .hit').length`);
+ ok('range toggle changes points (3m<=1y<=all)',m3<=y1&&y1<=all&&m3<all,[m3,y1,all]);
+ await ev(`document.querySelector('[data-rg="all"]').click()`);await sleep(300);
+ // chronological order despite unsorted import
+ ok('x positions increase with date (backdated import sorted)',await ev(`(()=>{const xs=[...document.querySelectorAll('#chart .hit')].map(c=>+c.getAttribute('cx'));return xs.every((x,i)=>i===0||x>=xs[i-1]-0.01)})()`));
+ // tap a point -> popup, add note
+ await ev(`document.querySelectorAll('#chart .hit')[0].dispatchEvent(new MouseEvent('click',{bubbles:true}))`);await sleep(300);
+ ok('point tap shows popup with date/value/note',(await txt('#pp')).includes('2023')&&(await txt('#pp')).includes('lb'));
+ await C('#pn');await T('#pnx','First <img src=x onerror="window.__x=1"> deadlift in the gym');await C('#pns');await sleep(900);
+ ok('note added from chart popup, shown escaped',await ev(`SELPT&&document.getElementById('pp').textContent.includes('First')&&!document.querySelector('#pp img')&&window.__x===undefined`),await txt('#pp'));
+ ok('note shown under entry in results list',(await txt('#ov')).includes('First  deadlift in the gym')||(await txt('#ov')).includes('deadlift in the gym'));
+ const rid=await ev(`CUR.results[0].id`);await ev(`document.querySelector('[data-nt="${rid}"]').click()`);await sleep(200);await T('#nx'+rid,'Edited later: felt strong');await C('#nxs'+rid);await sleep(900);
+ ok('note edited from entry list',(await txt('#ov')).includes('Edited later: felt strong'));
+ ok('log form has roomy 500-char note box',await (async()=>{await ev(`openLog(${dl})`);await sleep(500);return await ev(`document.getElementById('nt').maxLength===500&&document.getElementById('nt').rows>=5&&document.getElementById('nt').placeholder.includes('Any notes for next time')`)})());
+ await ev(`closeOv();tab('home')`);
+
  // history edit + delete via UI
  await ev(`openLog(${mile},CUR.results?CUR.results[0]:null)`);await sleep(500);
  await ev(`openMetric(${mile})`);await sleep(500);await ev(`document.querySelector('[data-ed]').click()`);await sleep(600);

@@ -138,6 +138,90 @@ try:
     s, j, _ = call("/api/admin/save", dict(nd, id=fid, active=False), admin="testpw"); s, lib2, _ = call("/api/exercises", cookie=ckA); check("hidden exercise not shown to members", "Farmer Carry" not in {e["name"] for e in lib2["exercises"]})
     s, j, _ = call("/api/admin/import", {"dry": True, "exercises": [{"name": "farmer carry", "category": "Strength", "primary": {"type": "distance", "unit": "ft", "label": "How far?"}}, {"name": "New One", "category": "Strength", "primary": {"type": "reps", "unit": "reps", "label": "Reps?"}}, {"name": "Broken"}]}, admin="testpw"); check("import preview: 1 added, 1 skipped, 1 bad", len(j["added"]) == 1 and len(j["skipped"]) == 1 and len(j["bad"]) == 1, j)
     s, j, _ = call("/api/admin/import", {"exercises": [{"name": "New One", "category": "Strength", "primary": {"type": "reps", "unit": "reps", "label": "Reps?"}}]}, admin="testpw"); s, al, _ = call("/api/admin/list", {}, admin="testpw"); check("import applied", len(al["exercises"]) == 37)
+    # --- notes, import, export (Carol & Dave)
+    s, j, ckC = call("/api/register", {"name": "Carol", "pin": "1111"}); s, j, ckD = call("/api/register", {"name": "Dave", "pin": "2222"})
+    gx = lambda n: ex[n]["id"]
+    s, tpl, _ = call("/api/import/template", cookie=ckC); tpl = tpl.decode("utf-8-sig") if isinstance(tpl, bytes) else str(tpl)
+    check("template CSV has the documented columns + example rows", tpl.splitlines()[0] == "Date,Exercise,Result,Second result (optional),Side / Hand / Foot,Equipment,Damper,Note" and "Grip Strength" in tpl and len(tpl.splitlines()) >= 6)
+    s, ref, _ = call("/api/import/reference", cookie=ckC); check("exercise-name reference lists all names", s == 200 and all(n in ref.decode("utf-8-sig") for n in ex))
+    check("import endpoints need login", call("/api/import/template")[0] == 401 and call("/api/import/preview", {"text": "x"})[0] == 401 and call("/api/export.csv")[0] == 401 and call("/api/results/note", {"id": 1})[0] == 401)
+    CSVT = "\n".join(["Date,Exercise,Result,Second result (optional),Side / Hand / Foot,Equipment,Damper,Note",
+        "2025-03-14,Grip Strength,60,,right,,,First try <script>alert(1)</script>",
+        "6/20/2025,grip  strength,66,,Right Hand,,,Feeling stronger",
+        "March 14 2025,Gymnazo Mile,10:30,,,,,windy",
+        "2025-09-02,GYMNAZO MILE,0:9:45,,,,,",
+        "2025-12-01,gymnazo mile,540,,,,,seconds format",
+        "2025-04-01,500m row,2:10,,,,5,",
+        "2025-07-01,Pull ups,8,,,,,",
+        "2025-08-01,Gripp Strenth,70,,Left Hand,,,typo name",
+        "not a date,Pull-ups,5,,,,,",
+        "2025-08-02,Pull-ups,abc,,,,,",
+        "2025-08-03,Grip Strength,50,,Elbow,,,",
+        "2025-08-04,Grip Strength,50,,,,,",
+        "2025-03-14,Grip Strength,60,,right,,,duplicate in file",
+        "2099-01-01,Pull-ups,5,,,,,",
+        "2025-08-05,Overhead Press (in 1 minute),45,,,Barbell,,missing reps",
+        "2025-08-06,Single Leg Balance,1:15,10,Left Leg,,,ok with optional weight"])
+    s, pv, _ = call("/api/import/preview", {"text": CSVT}, ckC)
+    byrow = {r["row"]: r for r in pv["rows"]}
+    check("preview: nothing saved before confirm", call("/api/home", cookie=ckC)[1]["metrics"] == [] and sqlite3.connect(DBP).execute("select count(*) from results where user_id=(select id from users where name='Carol')").fetchone()[0] == 0)
+    check("preview counts", pv["counts"] == {"ok": 8, "duplicate": 1, "problem": 7}, pv["counts"])
+    check("date formats ISO / US / long", byrow[2]["day"] == "2025-03-14" and byrow[3]["day"] == "2025-06-20" and byrow[4]["day"] == "2025-03-14")
+    check("time formats mm:ss, h:mm:ss, seconds", byrow[4]["p"] == 630 and byrow[5]["p"] == 585 and byrow[6]["p"] == 540, [byrow[i]["p"] for i in (4, 5, 6)])
+    check("name variants matched (case/space/partial/hyphen)", byrow[3]["exercise"] == "Grip Strength" and byrow[7]["exercise"] == "Row Machine - 500m Row" and byrow[8]["exercise"] == "Pull-ups" and byrow[6]["exercise"] == "Gymnazo Mile")
+    check("side 'right' matched to option", byrow[2]["sel"] == {"hand": "Right Hand"})
+    check("unknown name: plain message + suggestion", byrow[9]["status"] == "problem" and "Did you mean Grip Strength" in byrow[9]["error"] and byrow[9]["suggestions"][0]["name"] == "Grip Strength", byrow[9])
+    check("bad date / bad number / bad choice / missing choice / future / missing 2nd result are problems", all(byrow[i]["status"] == "problem" for i in (10, 11, 12, 13, 15, 16)))
+    check("problem rows carry the row number and reason", "date" in byrow[10]["error"] and "number" in byrow[11]["error"] and "Elbow" in byrow[12]["error"] and "Please add" in byrow[13]["error"])
+    check("in-file duplicate flagged", byrow[14]["status"] == "duplicate")
+    check("script tags stripped from notes", "<" not in byrow[2]["note"] and "script" not in byrow[2]["note"].replace("alert(1)", ""), byrow[2]["note"])
+    s, pv2, _ = call("/api/import/preview", {"text": CSVT, "fixes": {"9": gx("Grip Strength")}}, ckC)
+    check("dropdown fix turns a problem row into ok", {r["row"]: r for r in pv2["rows"]}[9]["status"] == "ok" and pv2["counts"]["problem"] == 6)
+    s, cf, _ = call("/api/import/confirm", {"text": CSVT, "fixes": {"9": gx("Grip Strength")}}, ckC)
+    check("confirm imports 9 and skips the rest", cf["imported"] == 9 and cf["counts"]["duplicate"] == 1, cf)
+    nb = [b["code"] for b in cf["newBadges"]]
+    check("one summary of new badges (once each)", len(nb) == len(set(nb)) and {"first_result", "first_pb", "results3", "months3", "improve10"} <= set(nb), nb)
+    s, m, _ = call(f"/api/metric?exercise_id={gx('Grip Strength')}", cookie=ckC)
+    days = [r["day"] for r in m["results"]]
+    check("backdated results sorted by date on chart data", days == sorted(days) and days[0] == "2025-03-14" and len(days) == 3, days)
+    rh = [x for x in m["series"] if x["label"] == "Right Hand"][0]; check("PB/first/latest recomputed from history", rh["best"]["value"] == 66 and rh["first"]["value"] == 60 and rh["latest"]["day"] == "2025-06-20")
+    s, mm, _ = call(f"/api/metric?exercise_id={gx('Gymnazo Mile')}", cookie=ckC); check("lower-is-better history: best is fastest", mm["series"][0]["best"]["value"] == 540 and mm["better"] == "lower")
+    s, h, _ = call("/api/home", cookie=ckC); check("imported exercises auto-tracked", {x["name"] for x in h["metrics"]} >= {"Grip Strength", "Gymnazo Mile", "Pull-ups", "Row Machine - 500m Row", "Single Leg Balance"})
+    check("home has sparkline data + recent row", all("spark" in x for x in h["metrics"] if x["latest"]) and len(h["recent"]) >= 3)
+    s, cf2, _ = call("/api/import/confirm", {"text": CSVT, "fixes": {"9": gx("Grip Strength")}}, ckC)
+    check("re-import: all duplicates, nothing added, no badges again", cf2["imported"] == 0 and cf2["newBadges"] == [] and cf2["counts"]["duplicate"] == 10, cf2)
+    # notes: add / edit later / privacy
+    rid = [r for r in m["results"] if r["day"] == "2025-08-01"][0]["id"]
+    s, j, _ = call("/api/results/note", {"id": rid, "note": "New <b>note</b> for next time"}, ckC); check("add/edit note after saving", s == 200)
+    s, m, _ = call(f"/api/metric?exercise_id={gx('Grip Strength')}", cookie=ckC); check("note edited and sanitized", [r for r in m["results"] if r["id"] == rid][0]["note"] == "New note for next time")
+    s, j, _ = call("/api/results/note", {"id": rid, "note": "x" * 700}, ckC); s, m, _ = call(f"/api/metric?exercise_id={gx('Grip Strength')}", cookie=ckC); check("notes capped at 500 chars", len([r for r in m["results"] if r["id"] == rid][0]["note"]) == 500)
+    check("Dave cannot edit Carol's note", call("/api/results/note", {"id": rid, "note": "hacked"}, ckD)[0] == 404)
+    s, j, _ = call("/api/results", {"exercise_id": gx("Pull-ups"), "primary": 9, "day": "2025-10-01", "note": "z" * 600}, ckC); s, mp, _ = call(f"/api/metric?exercise_id={gx('Pull-ups')}", cookie=ckC)
+    check("log form note up to 500", max(len(r["note"]) for r in mp["results"]) == 500)
+    s, md, _ = call(f"/api/metric?exercise_id={gx('Grip Strength')}", cookie=ckD); check("Dave sees no notes/results of Carol", md["results"] == [])
+    s, ex_csv, _ = call("/api/export.csv", cookie=ckC); ex_csv = ex_csv.decode("utf-8-sig")
+    check("export includes Note column + notes", ex_csv.splitlines()[0].endswith(",Note") and "New note for next time" not in ex_csv and "Feeling stronger" in ex_csv)
+    s, dx, _ = call("/api/export.csv", cookie=ckD); check("Dave export has only header (privacy)", len(dx.decode("utf-8-sig").strip().splitlines()) == 1)
+    s, ri, _ = call("/api/import/preview", {"text": ex_csv}, ckC); check("export re-imports cleanly (all duplicates, no problems)", ri["counts"]["problem"] == 0 and ri["counts"]["ok"] == 0, ri["counts"])
+    # tab-separated paste without header
+    s, pt, _ = call("/api/import/preview", {"text": "2024-01-05\tPull-ups\t4\t\t\t\t\tpasted"}, ckD); check("pasted tab rows without header work", pt["counts"]["ok"] == 1 and pt["rows"][0]["note"] == "pasted")
+    # cap
+    big = "Date,Exercise,Result\n" + "\n".join(f"2025-01-01,Pull-ups,{i+1}" for i in range(2000))
+    s, j, _ = call("/api/import/preview", {"text": big}, ckD); check("2,000 rows allowed", s == 200 and j["counts"]["ok"] == 2000)
+    s, j, _ = call("/api/import/preview", {"text": big + "\n2025-01-01,Pull-ups,3000"}, ckD); check("2,001 rows rejected with plain message", s == 400 and "2,000" in j["error"])
+    s, j, _ = call("/api/import/preview", {"text": "\n\n"}, ckD); check("empty input friendly error", s == 400)
+    # admin import for a member
+    check("admin import needs password", call("/api/admin/import-preview", {"user_id": 1, "text": "x"})[0] == 401 and call("/api/admin/import-confirm", {"user_id": 1, "text": "x"})[0] == 401 and call("/api/admin/members", {}, method="POST")[0] == 401)
+    s, mem, _ = call("/api/admin/members", {}, admin="testpw"); check("admin members: names only", all(set(x) == {"id", "name"} for x in mem["members"]))
+    did = [x["id"] for x in mem["members"] if x["name"] == "Dave"][0]
+    s, j, _ = call("/api/admin/import-preview", {"user_id": did, "text": "Date,Exercise,Result,Note\n2024-05-05,Gymnazo Loop,3:30,admin loaded"}, admin="testpw"); check("admin preview", s == 200 and j["counts"]["ok"] == 1)
+    s, j, _ = call("/api/admin/import-confirm", {"user_id": did, "text": "Date,Exercise,Result,Note\n2024-05-05,Gymnazo Loop,3:30,admin loaded"}, admin="testpw"); check("admin confirm imports for member", s == 200 and j["imported"] == 1)
+    s, h, _ = call("/api/home", cookie=ckD); check("member sees admin-imported result (backdated, tracked)", any(x["name"] == "Gymnazo Loop" and x["latest"]["day"] == "2024-05-05" for x in h["metrics"]))
+    s, hc, _ = call("/api/home", cookie=ckC); check("Carol unaffected by Dave's import", all(x["name"] != "Gymnazo Loop" for x in hc["metrics"]))
+    blob = json.dumps([call("/api/admin/stats", {}, admin="testpw")[1], call("/api/admin/list", {}, admin="testpw")[1], mem])
+    check("admin views never contain member notes", "Feeling stronger" not in blob and "New note" not in blob and "admin loaded" not in blob)
+    s, j, _ = call("/api/admin/import-confirm", {"user_id": 99999, "text": "x"}, admin="testpw"); check("admin import unknown member 404", s == 404)
+    call("/api/account/delete", {"pin": "1111"}, ckC); call("/api/account/delete", {"pin": "2222"}, ckD)
     # --- migration/seed idempotent: restart doesn't duplicate
     srv.terminate(); srv.wait(); srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "server.py")], env=env); time.sleep(1.2)
     s, al, _ = call("/api/admin/list", {}, admin="testpw"); check("restart keeps data, no re-seed", len(al["exercises"]) == 37)

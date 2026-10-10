@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Metrics admin · Gymnazo</title>
-<!-- admin-marker: gymnazo-metrics-admin-v1 -->
+<!-- admin-marker: gymnazo-metrics-admin-v2 import-v1 -->
 <style>
 body{font-family:system-ui,'Avenir Next',sans-serif;font-size:18px;background:#faf8f5;color:#2b2d33;margin:0}.w{max-width:760px;margin:0 auto;padding:14px}
 .top{background:#d4631c;color:#fff;padding:12px 16px;font-weight:700}
@@ -25,6 +25,8 @@ input,select,textarea{font:inherit;width:100%;padding:10px;min-height:48px;borde
 <label>Chart and personal best use</label><select id="hd"><option value="primary">Main measure</option><option value="secondary">Second measure</option></select></div>
 <h3>Choices (side, equipment, damper…)</h3><div class="s">One per line: key | question | option1, option2 | required yes/no | separate-chart yes/no</div><textarea id="sel" rows="4"></textarea>
 <div class="er" id="fe"></div><button id="sv">Save</button><button class="g" id="cx">Cancel</button></div>
+<div class="c"><h2>Import past results for a member</h2><div class="s">Choose the member, then paste or upload their CSV (columns: Date, Exercise, Result, Second result, Side / Hand / Foot, Equipment, Damper, Note). You see a preview first. Nothing is saved until you confirm. Existing results and notes are never shown here.</div>
+<label>Member</label><select id="im_u"></select><input type="file" id="im_f" accept=".csv,.txt"><textarea id="im_t" rows="6" placeholder="Date,Exercise,Result,..."></textarea><button id="im_p">Preview</button><div id="im_o"></div></div>
 <div class="c"><h2>Bulk import</h2><div class="s">Paste JSON like the file exercises.json: {"exercises":[{"name","description","category","primary":{"type","label","unit","better"},"secondary":null,"selectors":[]}]}. Names that already exist are skipped.</div><textarea id="bk" rows="8" placeholder='{"exercises":[...]}'></textarea><button id="pv">Preview</button><button id="im" class="g">Import</button><div id="bo" class="s"></div></div>
 </div></div>
 <script>
@@ -32,7 +34,7 @@ const $=id=>document.getElementById(id);let PW='',EX=[],EID=null;const TY=['time
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function A(p,b){const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':PW},body:JSON.stringify(b||{})});let j={};try{j=await r.json()}catch(e){}return {ok:r.ok,j}}
 ['pt','st2'].forEach(i=>$(i).innerHTML=TY.map(t=>`<option>${t}</option>`).join(''));
-$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load()};
+$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load();loadMem()};
 function stats(j){$('st').innerHTML=`<table><tr><td>Members</td><td><b>${j.members}</b></td></tr><tr><td>Results logged</td><td><b>${j.results}</b></td></tr><tr><td>Badges earned</td><td><b>${j.badgesAwarded}</b></td></tr><tr><td>Active exercises</td><td><b>${j.exercises}</b></td></tr></table><h3>Most tracked</h3><table><tr><th>Exercise</th><th>Members tracking</th><th>Results</th></tr>${j.popular.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.trackers}</td><td>${p.results}</td></tr>`).join('')}</table>`}
 async function load(){const {j}=await A('/api/admin/list');EX=j.exercises||[];$('cats').innerHTML=[...new Set(EX.map(e=>e.category))].map(c=>`<option value="${esc(c)}">`).join('');
  $('lst').innerHTML=EX.map((e,i)=>`<div class="ex"><div class="t"><b>${esc(e.name)}</b> ${e.active?'':'<span class="er">(hidden)</span>'}<div class="s">${esc(e.category)} · ${esc(e.def.primary.type)} (${esc(e.def.primary.unit)}, ${e.def.primary.better} is better)${e.def.secondary?' + '+esc(e.def.secondary.type):''}${e.def.selectors.length?' · choices: '+e.def.selectors.map(x=>esc(x.key)).join(', '):''}</div></div><button class="g" data-e="${e.id}">Edit</button><button class="g" data-u="${i}" aria-label="Move up">↑</button></div>`).join('');
@@ -48,5 +50,16 @@ $('sv').onclick=async()=>{const sels=$('sel').value.split('\n').filter(l=>l.trim
  const def={primary:{type:$('pt').value,unit:$('pu').value,better:$('pb').value,label:$('pl').value},secondary:$('se').checked?{type:$('st2').value,unit:$('su').value,better:$('sbt').value,label:$('sl').value,optional:$('so').checked}:null,selectors:sels,headline:$('se').checked?$('hd').value:'primary'};
  const {ok,j}=await A('/api/admin/save',{id:EID,name:$('n').value,description:$('d').value,category:$('cat').value,active:$('act').checked,def});if(!ok){$('fe').textContent=j.error||'Could not save';return}$('fm').classList.add('hide');load()};
 async function imp(dry){let t=$('bk').value;const {ok,j}=await A('/api/admin/import',{text:t,dry});$('bo').innerHTML=ok?`<b>${dry?'Preview':'Done'}:</b> ${j.added.length} ${dry?'would be added':'added'}, ${j.skipped.length} skipped (already exist)${j.bad.length?', '+j.bad.length+' problems: '+j.bad.map(b=>'item '+b.item+' ('+esc(b.error)+')').join('; '):''}`:`<span class="er">${esc(j.error||'Error')}</span>`;if(ok&&!dry)load()}
+
+let IMF={};
+async function loadMem(){const {j}=await A('/api/admin/members');$('im_u').innerHTML='<option value="">Choose a member…</option>'+(j.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}
+$('im_f').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>$('im_t').value=r.result;r.readAsText(f)};
+async function imPrev(reset){if(reset)IMF={};const u=$('im_u').value;if(!u){$('im_o').innerHTML='<span class="er">Please choose a member.</span>';return}
+ const {ok,j}=await A('/api/admin/import-preview',{user_id:+u,text:$('im_t').value,fixes:IMF});if(!ok){$('im_o').innerHTML='<span class="er">'+esc(j.error||'Error')+'</span>';return}
+ const pr=j.rows.filter(r=>r.status==='problem');
+ $('im_o').innerHTML=`<p><b>${j.counts.ok}</b> ready, <b>${j.counts.duplicate}</b> already saved (skipped), <b>${j.counts.problem}</b> problems</p>`+pr.map(r=>`<div class="ex" style="display:block"><b>Row ${r.row}</b> ${esc(r.error)}<select data-f="${r.row}"><option value="">Choose the right exercise…</option>${(r.suggestions||[]).map(x=>`<option value="${x.id}">★ ${esc(x.name)}</option>`).join('')}${EX.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>`).join('')+`<button id="im_c" ${j.counts.ok?'':'disabled'}>Import ${j.counts.ok} results</button>`;
+ $('im_o').querySelectorAll('[data-f]').forEach(s=>s.onchange=()=>{if(s.value){IMF[s.dataset.f]=+s.value;imPrev(false)}});
+ $('im_c').onclick=async()=>{const r=await A('/api/admin/import-confirm',{user_id:+u,text:$('im_t').value,fixes:IMF});$('im_o').innerHTML=r.ok?`<b>Done:</b> ${r.j.imported} imported, ${r.j.counts.duplicate} duplicates skipped, ${r.j.counts.problem} problem rows skipped.`:'<span class="er">'+esc(r.j.error||'Error')+'</span>'}}
+$('im_p').onclick=()=>imPrev(true);
 $('pv').onclick=()=>imp(true);$('im').onclick=()=>imp(false);
 </script></body></html>
