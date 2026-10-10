@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: metrics
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: echo ok
+    startCommand: python3 server.py
+    envVars:
+      - key: DB_PATH
+        value: /var/data/metrics.db
+      - key: ADMIN_PASSWORD
+        sync: false   # set in the Render dashboard; never commit it
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

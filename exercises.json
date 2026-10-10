@@ -1,0 +1,862 @@
+{
+ "exercises": [
+  {
+   "name": "Grip Strength",
+   "description": "Squeeze the dynamometer as hard as you can for 2 seconds. Take your best score of 3 attempts for each hand.",
+   "category": "Grip & Hang",
+   "primary": {
+    "type": "weight",
+    "label": "Best squeeze (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 0
+  },
+  {
+   "name": "Single Leg Balance",
+   "description": "Knee at 90º and hands on hips. Goal: 1 minute on each leg.",
+   "category": "Balance & Mobility",
+   "primary": {
+    "type": "time",
+    "label": "How long did you balance?",
+    "unit": "sec",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "weight",
+    "label": "Weight held (optional)",
+    "unit": "lb",
+    "optional": true
+   },
+   "selectors": [
+    {
+     "key": "side",
+     "label": "Which side are you tracking?",
+     "options": [
+      "Right Leg",
+      "Left Leg"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 1
+  },
+  {
+   "name": "Sled Push 20yd",
+   "description": "Push the sled 10 yards and back. Record the total weight you moved in under 1 minute.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight on the sled (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "time",
+    "label": "How long did it take? (optional)",
+    "unit": "sec",
+    "optional": true
+   },
+   "selectors": [],
+   "headline": "primary",
+   "sort": 2
+  },
+  {
+   "name": "Row Machine - 500m Row",
+   "description": "Choose your damper setting. Set the row machine to a custom distance of 500m.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "time",
+    "label": "How long did it take?",
+    "unit": "min",
+    "better": "lower"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "damper",
+     "label": "Damper setting (1 to 10)",
+     "options": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+     ],
+     "required": true,
+     "series": false
+    }
+   ],
+   "headline": "primary",
+   "sort": 3
+  },
+  {
+   "name": "Row Machine - 1000m Row",
+   "description": "Choose your damper setting. Set the row machine to a custom distance of 1000m.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "time",
+    "label": "How long did it take?",
+    "unit": "min",
+    "better": "lower"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "damper",
+     "label": "Damper setting (1 to 10)",
+     "options": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+     ],
+     "required": true,
+     "series": false
+    }
+   ],
+   "headline": "primary",
+   "sort": 4
+  },
+  {
+   "name": "Row Machine - 2000m Row",
+   "description": "Choose your damper setting. Set the row machine to a custom distance of 2000m.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "time",
+    "label": "How long did it take?",
+    "unit": "min",
+    "better": "lower"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "damper",
+     "label": "Damper setting (1 to 10)",
+     "options": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+     ],
+     "required": true,
+     "series": false
+    }
+   ],
+   "headline": "primary",
+   "sort": 5
+  },
+  {
+   "name": "Shuttle Run Line Touch (5-10-15 Yard Sprint)",
+   "description": "Run 5 yards and back, 10 yards and back, then 15 yards and back. Touch every line except on the final sprint back.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "time",
+    "label": "How long did it take?",
+    "unit": "sec",
+    "better": "lower"
+   },
+   "secondary": {
+    "type": "distance",
+    "label": "Distance covered (optional, feet)",
+    "unit": "ft",
+    "optional": true
+   },
+   "selectors": [],
+   "headline": "primary",
+   "sort": 6
+  },
+  {
+   "name": "Bilateral Hand / Unilateral Hand Overhead Hang",
+   "description": "Hang from the bar with both hands, then with one hand. Goal: 1 minute with both hands and 30 seconds with one hand.",
+   "category": "Grip & Hang",
+   "primary": {
+    "type": "time",
+    "label": "How long with both hands?",
+    "unit": "sec",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "time",
+    "label": "How long with one hand? (optional)",
+    "unit": "sec",
+    "optional": true
+   },
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand for the one-hand hang?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": false,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 7
+  },
+  {
+   "name": "Pull-ups",
+   "description": "How many reps before you need to rest? Arms straight at the bottom, chin over the bar at the top. Use the note box if you used bands.",
+   "category": "Bodyweight",
+   "primary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 8
+  },
+  {
+   "name": "Overhead Press (in 1 minute)",
+   "description": "Goal: press 20 reps (chest to overhead) in less than 1 minute. Record the weight and how many reps you got.",
+   "category": "Endurance",
+   "primary": {
+    "type": "weight",
+    "label": "Weight used (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 9
+  },
+  {
+   "name": "Snatch (in 1 minute)",
+   "description": "Goal: snatch 10 reps (from a ground tap to overhead) in less than 1 minute. Record the weight and how many reps you got.",
+   "category": "Endurance",
+   "primary": {
+    "type": "weight",
+    "label": "Weight used (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 10
+  },
+  {
+   "name": "Mace 360s",
+   "description": "Goal: complete 50, 100, 250 or 500 reps without setting the mace down.",
+   "category": "Endurance",
+   "primary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "weight",
+    "label": "Mace weight (optional)",
+    "unit": "lb",
+    "optional": true
+   },
+   "selectors": [],
+   "headline": "primary",
+   "sort": 11
+  },
+  {
+   "name": "Gymnazo Loop",
+   "description": "A quarter-mile run.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "time",
+    "label": "How long did it take?",
+    "unit": "min",
+    "better": "lower"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 12
+  },
+  {
+   "name": "Gymnazo Mile",
+   "description": "A 1 mile run.",
+   "category": "Running & Rowing",
+   "primary": {
+    "type": "time",
+    "label": "How long did it take?",
+    "unit": "min",
+    "better": "lower"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 13
+  },
+  {
+   "name": "Rope Flow Dragons in 1 minute",
+   "description": "Goal: 60 or more in 1 minute.",
+   "category": "Endurance",
+   "primary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "Reps on your weaker side (optional)",
+    "unit": "reps",
+    "optional": true
+   },
+   "selectors": [],
+   "headline": "primary",
+   "sort": 14
+  },
+  {
+   "name": "Rope Flow Dragon Switches in 1 minute",
+   "description": "180º Dragon Switches in 1 minute.",
+   "category": "Endurance",
+   "primary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "weight",
+    "label": "Rope weight (optional)",
+    "unit": "lb",
+    "optional": true
+   },
+   "selectors": [],
+   "headline": "primary",
+   "sort": 15
+  },
+  {
+   "name": "Box Jump",
+   "description": "Your highest box jump completion, or as many reps as you can in 1 minute.",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "height",
+    "label": "How high was the box?",
+    "unit": "ft",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "Reps in 1 minute (optional)",
+    "unit": "reps",
+    "optional": true
+   },
+   "selectors": [],
+   "headline": "primary",
+   "sort": 16
+  },
+  {
+   "name": "Anterior Triple Jump",
+   "description": "Jump 3 times without stopping, covering as much distance as you can. Best of 3 attempts.",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "distance",
+    "label": "How far did you go?",
+    "unit": "ft",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 17
+  },
+  {
+   "name": "Anterior Jump",
+   "description": "Stand on two feet, jump forward and land stable for the rep to count. Take the average of 3 attempts. Measure from the back of the closest heel.",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "distance",
+    "label": "How far did you jump?",
+    "unit": "ft",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 18
+  },
+  {
+   "name": "Single Leg Hop",
+   "description": "Balance on one foot, hop forward and land stable for the rep to count. Take the average of 3 attempts on each foot. Measure from the back of the heel.",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "distance",
+    "label": "How far did you hop?",
+    "unit": "in",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "side",
+     "label": "Which foot?",
+     "options": [
+      "Right Foot",
+      "Left Foot"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 19
+  },
+  {
+   "name": "Keiser Max Power Rotation Swing",
+   "description": "Lateral face Keiser, both hands, opposite rotation swing. Best of 3 attempts on each side. Use a Keiser with a power face plate. Aim for 10 to 30 lbs.",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "power",
+    "label": "Max power (watts)",
+    "unit": "watts",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "weight",
+    "label": "Resistance used (optional)",
+    "unit": "lb",
+    "optional": true
+   },
+   "selectors": [
+    {
+     "key": "side",
+     "label": "Which side?",
+     "options": [
+      "Right Side",
+      "Left Side"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 20
+  },
+  {
+   "name": "Barbell Landmine Split Switch Clean & Jerk",
+   "description": "Single arm, foot switch, clean and jerk (ground to overhead).",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight, barbell plus plates (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 21
+  },
+  {
+   "name": "Barbell Landmine Split Switch Snatch",
+   "description": "Single arm, foot switch, hand switch snatch (ground to overhead).",
+   "category": "Power & Jumps",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight, barbell plus plates (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 22
+  },
+  {
+   "name": "Zercher Squat",
+   "description": "Barbell from the ground: deadlift, Zercher transition, deep squat, then stand. Or from a rack, squat to 90º.",
+   "category": "Strength",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 23
+  },
+  {
+   "name": "Bench Press Strength",
+   "description": "Your best weight for a 1 to 3 rep max.",
+   "category": "Strength",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 24
+  },
+  {
+   "name": "Bench Press Endurance",
+   "description": "For ViPR, choose your weight. For barbell, choose 65, 95, 115 or 135 lb and go until you are tired. Goal: pick a weight you can do 16 to 32 reps at.",
+   "category": "Endurance",
+   "primary": {
+    "type": "weight",
+    "label": "Weight you chose (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "secondary",
+   "sort": 25
+  },
+  {
+   "name": "Back Squat Strength",
+   "description": "Squat with the barbell on your back in a squat rack. Your best weight for a 1 to 3 rep max.",
+   "category": "Strength",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 26
+  },
+  {
+   "name": "Back Squat Endurance",
+   "description": "For ViPR, choose your weight. For barbell, squat with the bar on your back in a squat rack. Choose 95, 135, 185 or 225 lb and go until you are tired. Goal: pick a weight you can do 16 to 32 reps at.",
+   "category": "Endurance",
+   "primary": {
+    "type": "weight",
+    "label": "Weight you chose (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "secondary",
+   "sort": 27
+  },
+  {
+   "name": "Deadlift",
+   "description": "Deadlift from the ground. Your best weight for a 1 to 3 rep max.",
+   "category": "Strength",
+   "primary": {
+    "type": "weight",
+    "label": "Total weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps? (optional)",
+    "unit": "reps",
+    "optional": true
+   },
+   "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "ViPR",
+      "Barbell",
+      "FitFighter"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 28
+  },
+  {
+   "name": "Kettlebell Single Arm Overhead Press",
+   "description": "Kettlebell in the rack position, then push press overhead.",
+   "category": "Strength",
+   "primary": {
+    "type": "weight",
+    "label": "Kettlebell weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 29
+  },
+  {
+   "name": "Kettlebell Single Arm Snatch",
+   "description": "Kettlebell snatch from the ground (your choice of static start or swing).",
+   "category": "Strength",
+   "primary": {
+    "type": "weight",
+    "label": "Kettlebell weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 30
+  },
+  {
+   "name": "Kettlebell Turkish Get-up",
+   "description": "Start lying on your back on the ground and return to lying on your back with your arm extended.",
+   "category": "Balance & Mobility",
+   "primary": {
+    "type": "weight",
+    "label": "Kettlebell weight (pounds)",
+    "unit": "lb",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [
+    {
+     "key": "hand",
+     "label": "Which hand?",
+     "options": [
+      "Right Hand",
+      "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    }
+   ],
+   "headline": "primary",
+   "sort": 31
+  },
+  {
+   "name": "Body Weight Squat in 1 minute",
+   "description": "As many body weight squats as you can in 1 minute.",
+   "category": "Bodyweight",
+   "primary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 32
+  },
+  {
+   "name": "Body Weight Push-ups to fatigue",
+   "description": "From your knees or your feet, lower until your elbows are at 90º. As many as you can before resting.",
+   "category": "Bodyweight",
+   "primary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 33
+  },
+  {
+   "name": "Body Weight Plank on Forearms",
+   "description": "Plank on your forearms. If you use a box, write down its height in the note.",
+   "category": "Bodyweight",
+   "primary": {
+    "type": "time",
+    "label": "How long did you hold it?",
+    "unit": "min",
+    "better": "higher"
+   },
+   "secondary": null,
+   "selectors": [],
+   "headline": "primary",
+   "sort": 34
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Metrics admin · Gymnazo</title>
+<!-- admin-marker: gymnazo-metrics-admin-v1 -->
+<style>
+body{font-family:system-ui,'Avenir Next',sans-serif;font-size:18px;background:#faf8f5;color:#2b2d33;margin:0}.w{max-width:760px;margin:0 auto;padding:14px}
+.top{background:#d4631c;color:#fff;padding:12px 16px;font-weight:700}
+.c{background:#fff;border:1px solid #e6e1da;border-radius:16px;padding:14px;margin:12px 0}h2{margin:.2em 0}
+button{font:inherit;font-weight:700;background:#d4631c;color:#fff;border:0;border-radius:12px;padding:12px 16px;min-height:52px;cursor:pointer;margin:4px 4px 4px 0}button.g{background:#fff;color:#2b2d33;border:2px solid #cfc8bd}button.r{background:#fff;color:#b3261e;border:2px solid #b3261e}
+input,select,textarea{font:inherit;width:100%;padding:10px;min-height:48px;border:2px solid #c9c2b8;border-radius:10px;margin:4px 0 8px;background:#fff}label{font-weight:700;display:block}
+.s{color:#5b5e68;font-size:16px}.row{display:flex;gap:10px}.row>*{flex:1}.hide{display:none}.er{color:#b3261e;font-weight:700}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:6px;border-bottom:1px solid #eee}
+.ex{display:flex;gap:8px;align-items:center;border-bottom:1px solid #eee;padding:8px 0}.ex .t{flex:1}
+</style></head><body><div class="top">Gymnazo Metrics · Admin</div><div class="w">
+<div class="c" id="lg"><h2>Admin password</h2><input id="pw" type="password" placeholder="Password"><button id="in">Open admin</button><div class="er" id="le"></div></div>
+<div id="ad" class="hide">
+<div class="c"><h2>Numbers <span class="s">(counts only, never individual scores)</span></h2><div id="st"></div></div>
+<div class="c"><h2>Exercise library</h2><button id="new">+ Add an exercise</button> <span class="s">Tap an exercise to edit. Hidden exercises disappear for members but their saved results are kept.</span><div id="lst"></div></div>
+<div class="c hide" id="fm"><h2 id="ft">Exercise</h2>
+<label>Name</label><input id="n"><label>Description</label><textarea id="d" rows="3"></textarea>
+<label>Category</label><input id="cat" list="cats" placeholder="e.g. Strength"><datalist id="cats"></datalist>
+<label><input type="checkbox" id="act" style="width:auto;min-height:0"> Visible to members</label>
+<h3>Main measure</h3><div class="row"><div><label>Type</label><select id="pt"></select></div><div><label>Unit</label><input id="pu" placeholder="lb, reps, ft, sec"></div><div><label>Better is</label><select id="pb"><option value="higher">Higher</option><option value="lower">Lower</option></select></div></div>
+<label>Question shown to member</label><input id="pl" placeholder="How much weight?">
+<h3><label><input type="checkbox" id="se" style="width:auto;min-height:0"> Add a second measure</label></h3>
+<div id="sb" class="hide"><div class="row"><div><label>Type</label><select id="st2"></select></div><div><label>Unit</label><input id="su"></div><div><label>Better is</label><select id="sbt"><option value="higher">Higher</option><option value="lower">Lower</option></select></div></div>
+<label>Question</label><input id="sl"><label><input type="checkbox" id="so" style="width:auto;min-height:0" checked> Optional for the member</label>
+<label>Chart and personal best use</label><select id="hd"><option value="primary">Main measure</option><option value="secondary">Second measure</option></select></div>
+<h3>Choices (side, equipment, damper…)</h3><div class="s">One per line: key | question | option1, option2 | required yes/no | separate-chart yes/no</div><textarea id="sel" rows="4"></textarea>
+<div class="er" id="fe"></div><button id="sv">Save</button><button class="g" id="cx">Cancel</button></div>
+<div class="c"><h2>Bulk import</h2><div class="s">Paste JSON like the file exercises.json: {"exercises":[{"name","description","category","primary":{"type","label","unit","better"},"secondary":null,"selectors":[]}]}. Names that already exist are skipped.</div><textarea id="bk" rows="8" placeholder='{"exercises":[...]}'></textarea><button id="pv">Preview</button><button id="im" class="g">Import</button><div id="bo" class="s"></div></div>
+</div></div>
+<script>
+const $=id=>document.getElementById(id);let PW='',EX=[],EID=null;const TY=['time','weight','reps','distance','height','power','number'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function A(p,b){const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':PW},body:JSON.stringify(b||{})});let j={};try{j=await r.json()}catch(e){}return {ok:r.ok,j}}
+['pt','st2'].forEach(i=>$(i).innerHTML=TY.map(t=>`<option>${t}</option>`).join(''));
+$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load()};
+function stats(j){$('st').innerHTML=`<table><tr><td>Members</td><td><b>${j.members}</b></td></tr><tr><td>Results logged</td><td><b>${j.results}</b></td></tr><tr><td>Badges earned</td><td><b>${j.badgesAwarded}</b></td></tr><tr><td>Active exercises</td><td><b>${j.exercises}</b></td></tr></table><h3>Most tracked</h3><table><tr><th>Exercise</th><th>Members tracking</th><th>Results</th></tr>${j.popular.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.trackers}</td><td>${p.results}</td></tr>`).join('')}</table>`}
+async function load(){const {j}=await A('/api/admin/list');EX=j.exercises||[];$('cats').innerHTML=[...new Set(EX.map(e=>e.category))].map(c=>`<option value="${esc(c)}">`).join('');
+ $('lst').innerHTML=EX.map((e,i)=>`<div class="ex"><div class="t"><b>${esc(e.name)}</b> ${e.active?'':'<span class="er">(hidden)</span>'}<div class="s">${esc(e.category)} · ${esc(e.def.primary.type)} (${esc(e.def.primary.unit)}, ${e.def.primary.better} is better)${e.def.secondary?' + '+esc(e.def.secondary.type):''}${e.def.selectors.length?' · choices: '+e.def.selectors.map(x=>esc(x.key)).join(', '):''}</div></div><button class="g" data-e="${e.id}">Edit</button><button class="g" data-u="${i}" aria-label="Move up">↑</button></div>`).join('');
+ $('lst').querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>edit(+b.dataset.e));
+ $('lst').querySelectorAll('[data-u]').forEach(b=>b.onclick=async()=>{const i=+b.dataset.u;if(!i)return;const ids=EX.map(e=>e.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];await A('/api/admin/reorder',{ids});load()})}
+function edit(id){const e=id?EX.find(x=>x.id===id):{name:'',description:'',category:'',active:true,def:{primary:{type:'weight',unit:'lb',better:'higher',label:''},secondary:null,selectors:[],headline:'primary'}};EID=id;const d=e.def;
+ $('ft').textContent=id?'Edit exercise':'New exercise';$('n').value=e.name;$('d').value=e.description;$('cat').value=e.category;$('act').checked=e.active;
+ $('pt').value=d.primary.type;$('pu').value=d.primary.unit;$('pb').value=d.primary.better;$('pl').value=d.primary.label;
+ const s=d.secondary;$('se').checked=!!s;$('sb').classList.toggle('hide',!s);if(s){$('st2').value=s.type;$('su').value=s.unit;$('sbt').value=s.better||'higher';$('sl').value=s.label;$('so').checked=s.optional!==false}$('hd').value=d.headline||'primary';
+ $('sel').value=d.selectors.map(x=>[x.key,x.label,x.options.join(', '),x.required?'yes':'no',x.series?'yes':'no'].join(' | ')).join('\n');$('fe').textContent='';$('fm').classList.remove('hide');$('fm').scrollIntoView()}
+$('new').onclick=()=>edit(0);$('cx').onclick=()=>$('fm').classList.add('hide');$('se').onchange=()=>$('sb').classList.toggle('hide',!$('se').checked);
+$('sv').onclick=async()=>{const sels=$('sel').value.split('\n').filter(l=>l.trim()).map(l=>{const p=l.split('|').map(x=>x.trim());return {key:p[0],label:p[1],options:(p[2]||'').split(',').map(x=>x.trim()).filter(Boolean),required:(p[3]||'yes').toLowerCase()!=='no',series:(p[4]||'yes').toLowerCase()!=='no'}});
+ const def={primary:{type:$('pt').value,unit:$('pu').value,better:$('pb').value,label:$('pl').value},secondary:$('se').checked?{type:$('st2').value,unit:$('su').value,better:$('sbt').value,label:$('sl').value,optional:$('so').checked}:null,selectors:sels,headline:$('se').checked?$('hd').value:'primary'};
+ const {ok,j}=await A('/api/admin/save',{id:EID,name:$('n').value,description:$('d').value,category:$('cat').value,active:$('act').checked,def});if(!ok){$('fe').textContent=j.error||'Could not save';return}$('fm').classList.add('hide');load()};
+async function imp(dry){let t=$('bk').value;const {ok,j}=await A('/api/admin/import',{text:t,dry});$('bo').innerHTML=ok?`<b>${dry?'Preview':'Done'}:</b> ${j.added.length} ${dry?'would be added':'added'}, ${j.skipped.length} skipped (already exist)${j.bad.length?', '+j.bad.length+' problems: '+j.bad.map(b=>'item '+b.item+' ('+esc(b.error)+')').join('; '):''}`:`<span class="er">${esc(j.error||'Error')}</span>`;if(ok&&!dry)load()}
+$('pv').onclick=()=>imp(true);$('im').onclick=()=>imp(false);
+</script></body></html>

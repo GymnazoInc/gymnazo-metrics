@@ -1,0 +1,223 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#d4631c">
+<title>Gymnazo Ability &amp; Capacity Metrics</title>
+<!-- app-marker: gymnazo-metrics-v1 -->
+<style>
+:root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next LT Pro','Avenir Next','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:var(--sans);font-size:19px;line-height:1.45;color:var(--ink);background:var(--bg)}
+.top{background:var(--or);color:#fff;text-align:center;font-weight:600;padding:8px 12px;font-size:16px}
+.head{background:#fff;border-bottom:1px solid var(--line);text-align:center;padding:12px 12px 10px}
+.head img{height:38px;max-width:80%}
+.head h1{font-family:var(--serif);font-size:24px;margin:6px 0 0;font-weight:600}.head p{margin:2px 0 0;color:var(--mut);font-size:17px}
+.wrap{max-width:640px;margin:0 auto;padding:12px 14px 90px}
+nav{position:sticky;top:0;z-index:8;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:6px;padding:8px 8px}
+nav button{flex:1;background:var(--bg);color:var(--ink);border:2px solid var(--line);min-height:60px;font-size:16px;padding:4px 2px;line-height:1.15;box-shadow:none}
+nav button .e{display:block;font-size:22px}nav button.act{background:var(--or);border-color:var(--or);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 4px 16px rgba(40,30,20,.07)}
+h2{font-family:var(--serif);font-weight:600;font-size:26px;margin:0 0 10px}h3{font-size:21px;margin:0}
+.small{font-size:17px;color:var(--mut)}.err{color:#b3261e;font-weight:700;min-height:1.4em;margin:4px 0}
+button{font:inherit;font-weight:700;font-size:20px;border:0;border-radius:16px;padding:14px 18px;min-height:60px;width:100%;cursor:pointer;background:var(--or);color:#fff;transition:transform .15s cubic-bezier(.3,1.8,.5,1);box-shadow:0 3px 0 rgba(0,0,0,.15)}
+button:active{transform:scale(.95)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:4px solid #2b6cb0;outline-offset:2px}
+button.alt{background:#fff;color:var(--or2);border:2px solid var(--or)}button.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+button.gold{background:var(--gold);color:var(--navy)}button.danger{background:#fff;color:#b3261e;border:2px solid #b3261e;box-shadow:none}
+button.big{min-height:76px;font-size:24px;border-radius:20px}
+input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],select,textarea{width:100%;font-size:22px;min-height:60px;padding:10px 14px;border:3px solid #c9c2b8;border-radius:14px;margin:6px 0;font-family:inherit;color:var(--ink);background:#fff}
+textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;margin-top:14px}
+.hide{display:none!important}
+.choice{display:grid;gap:14px}.choice button{min-height:84px;font-size:24px}.choice small{display:block;font-weight:500;font-size:16px}
+.chip{display:inline-block;background:var(--orl);color:var(--or2);border-radius:20px;padding:2px 12px;font-size:15px;font-weight:700}
+.mc .nm{font-family:var(--serif);font-size:24px;font-weight:600;margin:4px 0}.mc .row{display:flex;gap:10px;margin-top:12px}.mc .row button{flex:1}
+.val{font-size:30px;font-weight:700;color:var(--ink)}.trend{font-weight:700}.trend.up{color:var(--ok)}.trend.down{color:var(--warn)}
+.cat{font-family:var(--serif);font-size:25px;color:var(--or2);margin:26px 0 6px;padding-bottom:4px;border-bottom:3px solid var(--or)}
+.ex{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}.ex b{font-size:21px}.ex p{margin:4px 0 10px;color:var(--mut);font-size:17px}
+.ex.on{border-color:var(--or);background:#fffaf6}
+.ov{position:fixed;inset:0;z-index:20;background:var(--bg);overflow:auto}.ov .in{max-width:640px;margin:0 auto;padding:12px 14px 120px}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:21;background:#fff;border-top:1px solid var(--line);padding:10px 14px}.bar .in2{max-width:640px;margin:0 auto;display:flex;gap:10px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}.seg button{width:auto;flex:1 1 40%;background:#fff;color:var(--ink);border:3px solid #c9c2b8;box-shadow:none;min-height:60px}.seg button.on{background:var(--or);border-color:var(--or);color:#fff}
+.mm{display:flex;align-items:center;gap:8px}.mm input{flex:1;min-width:0;text-align:center}.unit{font-weight:700;color:var(--mut)}
+.pbcard{background:linear-gradient(#fff3d6,#f6dca0);border:2px solid var(--gold);border-radius:18px;padding:14px;text-align:center}.pbcard b{font-size:34px;font-family:var(--serif)}
+.msg{font-family:var(--serif);font-size:22px;margin:10px 0}
+.er{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.er .t{flex:1}.er button{width:auto;min-height:56px;padding:6px 16px;font-size:17px}
+.star{color:var(--gold)}
+.bg{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bd{border-radius:18px;padding:14px 8px;text-align:center;border:2px dashed #cbc4ba;background:#fff;font-size:16px}.bd .ic{font-size:44px;display:block;filter:grayscale(1) opacity(.4)}.bd.got{border:2px solid var(--gold);background:linear-gradient(#fff8e6,#fbe6b3);font-weight:700}.bd.got .ic{filter:none}.bd b{display:block;font-size:19px}
+#toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:var(--navy);color:#fff;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#toast.show{display:block;animation:drop .4s cubic-bezier(.3,1.6,.5,1)}@keyframes drop{from{transform:translateY(-70px);opacity:0}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+svg text{font-family:var(--sans)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body>
+<canvas id="confetti"></canvas><div id="toast" role="status" aria-live="polite"></div>
+<div class="top">Move With Confidence</div>
+<div class="head"><img src="/logo.png" alt="Gymnazo"><h1>Ability &amp; Capacity Metrics</h1><p>Train for the decades ahead.</p></div>
+<div id="navw" class="hide"><nav><button data-t="home" class="act"><span class="e">📈</span>My Progress</button><button data-t="lib"><span class="e">🔍</span>Exercises</button><button data-t="badges"><span class="e">🏅</span>Badges</button><button data-t="me"><span class="e">👤</span>Me</button></nav></div>
+<div class="wrap">
+
+<div id="login" class="card hide">
+ <div id="choose"><h2>Welcome! 👋</h2><p class="small" style="margin-top:0">Your results are private. Only you can see them.</p>
+  <div class="choice"><button class="big" id="pickNew">I'm new<small>Create my account</small></button><button class="alt big" id="pickOld">I already signed up<small>Log in</small></button></div></div>
+ <div id="formbox" class="hide"><h2 id="ftitle"></h2>
+  <label class="l" for="name">Your name</label><input id="name" type="text" placeholder="Type your name" maxlength="24" autocomplete="username" autocapitalize="words">
+  <label class="l" for="pin">Your 4-digit PIN <span class="small">(4 numbers)</span></label><input id="pin" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="current-password" style="-webkit-text-security:disc;letter-spacing:.4em">
+  <div class="err" id="lerr" role="alert"></div><button id="go" class="big"></button><p class="small" id="fhint"></p><button class="ghost" id="back">← Go back</button></div>
+ <p class="small" style="margin-bottom:0">Forgot your PIN? Ask the studio.</p>
+</div>
+
+<div id="app" class="hide">
+ <div id="t-home"></div>
+ <div id="t-lib" class="hide"></div>
+ <div id="t-badges" class="hide"></div>
+ <div id="t-me" class="hide"></div>
+</div>
+</div>
+<div id="ov" class="ov hide"></div><div id="ovbar" class="bar hide"></div>
+<script>
+const $=id=>document.getElementById(id);
+let ME=null,LIB=null,HOME=null,TAB='home',MODE='new';
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+async function api(p,b){let r;try{r=await fetch(p,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{})}catch(e){return {ok:false,j:{error:'Can\'t reach the internet. Please try again.'}}}let j={};try{j=await r.json()}catch(e){}return {ok:r.ok,j}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.className='show';clearTimeout(tt);tt=setTimeout(()=>t.className='',3800)}
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function fmtDay(d){const p=d.split('-');return MON[+p[1]-1].slice(0,3)+' '+(+p[2])+', '+p[0]}
+function mmss(s){s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60,p=n=>String(n).padStart(2,'0');return h?h+':'+p(m)+':'+p(x):m+':'+p(x)}
+function num(v){return String(Math.round(v*100)/100)}
+function fmt(m,v){if(v==null)return '—';if(m.type==='time')return m.unit==='sec'&&v<60?Math.round(v)+' sec':mmss(v);return num(v)+(m.unit?' '+m.unit:'')}
+function hm(def){return def.headline==='secondary'?def.secondary:def.primary}
+function hbetter(def){return def.headline==='secondary'?(def.secondary.better||'higher'):def.primary.better}
+function arrow(t,better){if(t==='up')return '<span class="trend up">▲ Improving</span>';if(t==='down')return '<span class="trend down">▼ A little lower</span>';if(t==='same')return '<span class="trend">● Steady</span>';return '<span class="trend">★ First result</span>'}
+
+// ---------- login ----------
+function setMode(m){MODE=m;$('choose').classList.add('hide');$('formbox').classList.remove('hide');$('lerr').textContent='';$('ftitle').textContent=m==='new'?'Create my account':'Log in';$('go').textContent=m==='new'?'Create my account':'Log in';
+ $('fhint').textContent=m==='new'?'Pick any name and a PIN you will remember. You will use the same two to log in next time.':'Type the same name and PIN you picked before.';$('name').focus()}
+$('pickNew').onclick=()=>setMode('new');$('pickOld').onclick=()=>setMode('old');
+$('back').onclick=()=>{$('formbox').classList.add('hide');$('choose').classList.remove('hide');$('lerr').textContent=''};
+$('go').onclick=async()=>{$('lerr').textContent='';const {ok,j}=await api(MODE==='new'?'/api/register':'/api/login',{name:$('name').value,pin:$('pin').value});if(!ok){$('lerr').textContent=j.error||'Something went wrong. Please try again.';return}ME=j;$('pin').value='';await start(j.new)};
+async function logout(){await api('/api/logout',{});ME=null;LIB=null;HOME=null;closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick()}
+
+// ---------- app shell ----------
+async function start(isNew){$('login').classList.add('hide');$('app').classList.remove('hide');$('navw').classList.remove('hide');
+ await Promise.all([loadLib(),loadHome()]);tab('home');
+ if(isNew)toast('Welcome, '+ME.name+'! 🌱');if(!ME.picksSaved)openPicker(true)}
+async function loadLib(){const {ok,j}=await api('/api/exercises');if(ok)LIB=j}
+async function loadHome(){const {ok,j}=await api('/api/home');if(ok)HOME=j}
+function tab(t){TAB=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('act',b.dataset.t===t));['home','lib','badges','me'].forEach(x=>$('t-'+x).classList.toggle('hide',x!==t));scrollTo(0,0);({home:drawHome,lib:drawLib,badges:drawBadges,me:drawMe})[t]()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+function bySearch(e,q){q=q.trim().toLowerCase();return !q||(e.name+' '+e.description+' '+e.category).toLowerCase().indexOf(q)>-1}
+
+// ---------- home ----------
+function drawHome(){const H=HOME||{metrics:[],retest:[]};let h=`<div class="card"><h2>Hi, ${esc(ME.name)}! 👋</h2><p class="small" style="margin:0">Only you can see your results.</p></div>`;
+ if(H.retest.length)h+=`<div class="card" style="background:#fffaf6;border-color:var(--or)"><h3>Ready to test again? 🌿</h3><p class="small">It has been a while. Only if you feel like it:</p>${H.retest.slice(0,3).map(r=>`<div class="er"><div class="t"><b>${esc(r.name)}</b><div class="small">${Math.round(r.days/30)} months ago</div></div><button data-log="${r.id}">Log it</button></div>`).join('')}<button class="ghost" id="hideNudge" style="margin-top:10px">Not now</button></div>`;
+ if(!H.metrics.length)h+=`<div class="card"><h2>Let's choose your metrics</h2><p>Pick the exercises you want to follow over time. You can change this any time.</p><button class="big" id="addM">＋ Choose my metrics</button></div>`;
+ else{h+=H.metrics.map(m=>{const hmz=hm(m.def);return `<div class="card mc"><span class="chip">${esc(m.category)}</span><div class="nm">${esc(m.name)}</div>`+(m.latest?`<div class="small">Latest · ${esc(fmtDay(m.latest.day))}${m.latest.series?' · '+esc(m.latest.series):''}</div><div class="val">${esc(fmt(hmz,m.latest.value))}</div><div class="small">Best: <b>${esc(fmt(hmz,m.best))}</b> ${m.isBest?'⭐':''} &nbsp; ${arrow(m.trend)}</div>`:`<div class="small">No results yet. Log your first one!</div>`)+`<div class="row"><button data-log="${m.id}">Log a result</button><button class="alt" data-open="${m.id}">My progress</button></div></div>`}).join('')+`<button class="alt big" id="addM">＋ Add metrics</button>`}
+ $('t-home').innerHTML=h;
+ $('t-home').querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>openLog(+b.dataset.log));
+ $('t-home').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openMetric(+b.dataset.open));
+ const a=$('addM');if(a)a.onclick=()=>openPicker(false);
+ const hn=$('hideNudge');if(hn)hn.onclick=async()=>{await api('/api/nudge/hide',{});await loadHome();drawHome()}}
+
+// ---------- library ----------
+let LQ='';
+function drawLib(){let h=`<div class="card"><h2>Exercises</h2><input id="lq" type="text" placeholder="🔍 Search exercises" aria-label="Search exercises" value="${esc(LQ)}"></div><div id="ll"></div>`;$('t-lib').innerHTML=h;$('lq').oninput=e=>{LQ=e.target.value;drawLibList()};drawLibList()}
+function drawLibList(){const L=LIB.exercises.filter(e=>bySearch(e,LQ));let h='';
+ for(const c of LIB.categories){const E=L.filter(e=>e.category===c);if(!E.length)continue;h+=`<div class="cat">${esc(c)}</div>`+E.map(e=>`<div class="ex ${e.tracked?'on':''}"><b>${esc(e.name)}</b><p>${esc(e.description)}</p>${e.tracked?`<div style="display:flex;gap:8px"><button class="alt" data-open="${e.id}">My progress</button><button class="ghost" data-tg="${e.id}" data-v="0">Stop tracking</button></div>`:`<button data-tg="${e.id}" data-v="1">Track this</button>`}</div>`).join('')}
+ $('ll').innerHTML=h||'<div class="card">No exercises match. Try fewer letters.</div>';
+ $('ll').querySelectorAll('[data-tg]').forEach(b=>b.onclick=async()=>{const {ok,j}=await api('/api/track/toggle',{exercise_id:+b.dataset.tg,tracked:b.dataset.v==='1'});if(ok){const e=LIB.exercises.find(x=>x.id===+b.dataset.tg);e.tracked=b.dataset.v==='1';ME.picksSaved=true;await loadHome();drawLibList();toast(e.tracked?'Now tracking '+e.name+' ✔':'Stopped tracking. Your saved results are kept.');celebrate(j.newBadges)}});
+ $('ll').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openMetric(+b.dataset.open))}
+
+// ---------- picker ----------
+let PK=new Set(),PKQ='';
+function openPicker(first){PK=new Set(LIB.exercises.filter(e=>e.tracked).map(e=>e.id));PKQ='';
+ $('ov').innerHTML=`<div class="in"><h2>${first?'Choose your metrics':'Add or remove metrics'}</h2><p class="small">${first?'Tick the exercises you want to follow over time. You can change this any time.':'Tick to add, untick to stop tracking. Your saved results are always kept.'}</p><input id="pq" type="text" placeholder="🔍 Search exercises" aria-label="Search exercises"><div id="pl"></div></div>`;
+ $('ovbar').innerHTML=`<div class="in2">${first?'':'<button class="ghost" id="pc">Cancel</button>'}<button id="ps">Save</button></div>`;
+ $('ov').classList.remove('hide');$('ovbar').classList.remove('hide');drawPicker();$('pq').oninput=e=>{PKQ=e.target.value;drawPicker()};
+ if(!first)$('pc').onclick=closeOv;
+ $('ps').onclick=async()=>{const {ok,j}=await api('/api/track',{ids:[...PK]});if(!ok){toast(j.error||'Something went wrong.');return}ME.picksSaved=true;await Promise.all([loadLib(),loadHome()]);closeOv();tab(TAB);toast('Saved! ✔');celebrate(j.newBadges)}}
+function drawPicker(){const L=LIB.exercises.filter(e=>bySearch(e,PKQ));let h='';
+ for(const c of LIB.categories){const E=L.filter(e=>e.category===c);if(!E.length)continue;h+=`<div class="cat">${esc(c)}</div>`+E.map(e=>`<label class="ex ${PK.has(e.id)?'on':''}" style="display:flex;gap:14px;align-items:center;min-height:68px;cursor:pointer"><input type="checkbox" data-id="${e.id}" ${PK.has(e.id)?'checked':''} style="width:34px;height:34px;flex:none;margin:0"><span><b>${esc(e.name)}</b></span></label>`).join('')}
+ $('pl').innerHTML=h||'<p>No exercises match.</p>';$('ps').textContent='Save ('+PK.size+' chosen)';
+ $('pl').querySelectorAll('input').forEach(i=>i.onchange=()=>{i.checked?PK.add(+i.dataset.id):PK.delete(+i.dataset.id);i.closest('label').classList.toggle('on',i.checked);$('ps').textContent='Save ('+PK.size+' chosen)'})}
+function closeOv(){$('ov').classList.add('hide');$('ovbar').classList.add('hide');$('ov').innerHTML=''}
+
+// ---------- metric page ----------
+let CUR=null,CURS=null;
+async function openMetric(id,keepSeries){const {ok,j}=await api('/api/metric?exercise_id='+id);if(!ok){toast(j.error||'Something went wrong.');return}CUR=j;
+ const lastSeries=j.results.length?j.results[j.results.length-1].series:'';if(!keepSeries||!j.series.find(s=>s.label===CURS))CURS=lastSeries;
+ $('ov').classList.remove('hide');$('ovbar').classList.add('hide');drawMetric();$('ov').scrollTop=0}
+function improveText(def,s){if(!s||s.count<2)return s&&s.count===1?'Your first result is saved! Test again soon to see your progress.':'';
+ const m=hm(def),b=hbetter(def),f=s.first.value,l=s.latest.value,mon=MON[+s.first.day.slice(5,7)-1];
+ if(l===f)return 'Right where you started in '+mon+'. Steady!';
+ const better=b==='higher'?l>f:l<f,d=Math.abs(l-f);
+ if(!better)return 'Your latest is a little lower than your first. That\'s okay. Bodies have ups and downs. Keep going!';
+ if(m.type==='time')return b==='lower'?`You're ${mmss(d)} faster since ${mon}! 🎉`:`You've added ${mmss(d)} since ${mon}! 🎉`;
+ return `You've improved ${num(d)} ${m.unit||''} since ${mon}! 🎉`}
+function chartSvg(def,rs){const m=hm(def),better=hbetter(def);rs=rs.filter(r=>r.h!=null);if(!rs.length)return '';
+ const W=360,Ht=210,L=52,R=14,T=16,B=34;const vals=rs.map(r=>r.h);let lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=lo*.1||1;hi+=hi*.1||1}const pad=(hi-lo)*.12;lo-=pad;hi+=pad;
+ const t0=Date.parse(rs[0].day),t1=Date.parse(rs[rs.length-1].day);const X=i=>rs.length===1?(L+(W-L-R)/2):L+(t1===t0?i/(rs.length-1):(Date.parse(rs[i].day)-t0)/(t1-t0))*(W-L-R);
+ const Y=v=>{const f=(v-lo)/(hi-lo);return T+(better==='higher'?1-f:f)*(Ht-T-B)};
+ const best=rs.reduce((a,r)=>a==null||(better==='higher'?r.h>a.h:r.h<a.h)?r:a,null);
+ const pts=rs.map((r,i)=>X(i).toFixed(1)+','+Y(r.h).toFixed(1)).join(' ');
+ const yt=[hi-pad,lo+pad];
+ let s=`<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Line chart of your results over time" style="width:100%;height:auto;background:#fffaf6;border-radius:14px;border:1px solid var(--line)">`;
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${Ht-B}" stroke="#d9d2c8"/><line x1="${L}" y1="${Ht-B}" x2="${W-R}" y2="${Ht-B}" stroke="#d9d2c8"/>`;
+ s+=`<text x="${L-6}" y="${Y(yt[0])+5}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(fmt(Object.assign({},m,{unit:m.type==='time'?'min':''}),yt[0]).replace(/ .*/,'')) }</text><text x="${L-6}" y="${Y(yt[1])+5}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(fmt(Object.assign({},m,{unit:m.type==='time'?'min':''}),yt[1]).replace(/ .*/,''))}</text>`;
+ s+=`<text x="${L}" y="${Ht-10}" font-size="13" fill="#5b5e68">${esc(fmtDay(rs[0].day).replace(/, \d+$/,''))}</text>`;if(rs.length>1)s+=`<text x="${W-R}" y="${Ht-10}" font-size="13" text-anchor="end" fill="#5b5e68">${esc(fmtDay(rs[rs.length-1].day).replace(/, \d+$/,''))}</text>`;
+ s+=`<polyline points="${pts}" fill="none" stroke="#d4631c" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+ rs.forEach((r,i)=>{const isb=r===best;s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="${isb?9:6}" fill="${isb?'#e3b04b':'#fff'}" stroke="#d4631c" stroke-width="3"/>`});
+ s+=`<text x="${X(rs.indexOf(best)).toFixed(1)}" y="${Math.max(12,Y(best.h)-14).toFixed(1)}" font-size="14" font-weight="700" text-anchor="middle" fill="#7a4a00">★ Best</text></svg>`;
+ return s+`<div class="small" style="margin-top:4px">${better==='lower'?'Higher on the chart means faster (better).':'Higher on the chart means better.'}</div>`}
+function selTxt(def,sel){return def.selectors.map(x=>sel[x.key]?esc(sel[x.key]):'').filter(Boolean).join(' · ')}
+function drawMetric(){const j=CUR,d=j.exercise.def,m=hm(d);const ser=j.series.find(s=>s.label===CURS)||j.series[0];
+ const rs=j.results.filter(r=>r.series===(ser?ser.label:''));
+ let h=`<div class="in"><button class="ghost" id="mb" style="width:auto;margin-bottom:8px">← Back</button><span class="chip">${esc(j.exercise.category)}</span><h2 style="margin-top:6px">${esc(j.exercise.name)}</h2><p class="small">${esc(j.exercise.description)}</p><button class="big" id="ml">Log a new result</button>`;
+ if(j.series.length>1)h+=`<div class="card"><b>Show results for:</b><div class="seg" style="margin-top:8px">${j.series.map(s=>`<button data-sr="${esc(s.label)}" class="${s.label===ser.label?'on':''}">${esc(s.label||'All')}</button>`).join('')}</div></div>`;
+ if(ser){h+=`<div class="card"><div class="msg">${esc(improveText(d,ser))}</div>${chartSvg(d,rs)}</div><div class="pbcard"><div class="small">⭐ Your personal best${ser.label?' · '+esc(ser.label):''}</div><b>${esc(fmt(m,ser.best.value))}</b><div class="small">${esc(fmtDay(ser.best.day))}</div></div>`;
+  if(d.headline==='secondary')h+=`<p class="small">Tracking: ${esc(m.label)} at the ${esc(d.primary.label.toLowerCase())} you chose.</p>`}
+ else h+=`<div class="card"><p>No results yet. Tap the big button to log your first one. It only takes a minute!</p></div>`;
+ h+=`<div class="card"><h3>My results</h3>${j.results.length?[...j.results].reverse().filter(r=>!ser||r.series===ser.label).map(r=>`<div class="er"><div class="t"><b>${esc(fmt(d.primary,r.p))}${d.secondary&&r.s!=null?' · '+esc(fmt(d.secondary,r.s)):''}</b> ${r.isPb?'<span class="star">⭐ Personal best</span>':''}<div class="small">${esc(fmtDay(r.day))}${selTxt(d,r.sel)?' · '+selTxt(d,r.sel):''}${r.note?' · '+esc(r.note):''}</div></div><button class="alt" data-ed="${r.id}">Edit</button></div>`).join(''):'<p class="small">Nothing yet.</p>'}</div>`;
+ h+=j.tracked?`<button class="ghost" id="mt" style="margin-top:6px">Stop tracking this</button><p class="small">Your saved results are kept if you stop.</p>`:'';
+ $('ov').innerHTML=h+'</div>';
+ $('mb').onclick=async()=>{closeOv();await Promise.all([loadHome(),loadLib()]);tab(TAB)};$('ml').onclick=()=>openLog(j.exercise.id);
+ $('ov').querySelectorAll('[data-sr]').forEach(b=>b.onclick=()=>{CURS=b.dataset.sr;drawMetric()});
+ $('ov').querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>openLog(j.exercise.id,j.results.find(r=>r.id===+b.dataset.ed)));
+ const mt=$('mt');if(mt)mt.onclick=async()=>{await api('/api/track/toggle',{exercise_id:j.exercise.id,tracked:false});toast('Stopped tracking. Your saved results are kept.');await Promise.all([loadHome(),loadLib()]);openMetric(j.exercise.id,true)}}
+
+// ---------- log form ----------
+let LG=null;
+function mInput(m,pre,id){if(m.type==='time'){const mi=pre!=null?Math.floor(pre/60):'',se=pre!=null?pre%60:'';return `<div class="mm"><input id="${id}m" type="tel" inputmode="numeric" placeholder="0" aria-label="Minutes" value="${mi}"><span class="unit">min</span><input id="${id}s" type="tel" inputmode="numeric" placeholder="0" aria-label="Seconds" value="${se}"><span class="unit">sec</span></div>`}
+ return `<div class="mm"><input id="${id}" type="text" inputmode="decimal" placeholder="0" aria-label="${esc(m.label)}" value="${pre!=null?num(pre):''}"><span class="unit">${esc(m.unit||'')}</span></div>`}
+function mVal(m,id){if(m.type==='time'){const a=$(id+'m').value.trim(),b=$(id+'s').value.trim();if(!a&&!b)return '';const t=(parseFloat(a||0)*60)+parseFloat(b||0);return isNaN(t)?'x':t}return $(id).value.trim().replace(',','.')}
+async function openLog(id,edit){if(!CUR||CUR.exercise.id!==id){const {ok,j}=await api('/api/metric?exercise_id='+id);if(!ok)return;CUR=j}const d=CUR.exercise.def;LG={id:id,edit:edit||null,sel:Object.assign({},edit?edit.sel:{})};
+ if(!edit){const lastR=CUR.results[CUR.results.length-1];if(lastR)LG.sel=Object.assign({},lastR.sel)}
+ let h=`<div class="in"><button class="ghost" id="lb" style="width:auto;margin-bottom:8px">← Back</button><h2>${edit?'Change this result':esc(CUR.exercise.name)}</h2><p class="small">${esc(CUR.exercise.description)}</p>`;
+ d.selectors.forEach(x=>{h+=`<label class="l">${esc(x.label)}${x.required?'':' <span class="small">(if you like)</span>'}</label>`+(x.options.length<=4?`<div class="seg" data-sk="${x.key}">${x.options.map(o=>`<button type="button" data-v="${esc(o)}" class="${LG.sel[x.key]===o?'on':''}">${esc(o)}</button>`).join('')}</div>`:`<select data-sk="${x.key}"><option value="">Choose…</option>${x.options.map(o=>`<option ${LG.sel[x.key]===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`)});
+ h+=`<label class="l">${esc(d.primary.label)}</label>${mInput(d.primary,edit?edit.p:null,'pv')}`;
+ if(d.secondary)h+=`<label class="l">${esc(d.secondary.label)}${d.secondary.optional?'':''}</label>${mInput(d.secondary,edit&&edit.s!=null?edit.s:null,'sv')}`;
+ h+=`<label class="l" for="dy">Date</label><input id="dy" type="date" value="${edit?edit.day:ME.today}" max="${ME.today}"><label class="l" for="nt">Note <span class="small">(if you like)</span></label><textarea id="nt" maxlength="300" placeholder="How did it feel?">${edit?esc(edit.note):''}</textarea><div class="err" id="le" role="alert"></div>`+(edit?`<button class="danger" id="ld" style="margin-top:10px">Delete this result</button>`:'')+`</div>`;
+ $('ov').innerHTML=h;$('ovbar').innerHTML=`<div class="in2"><button id="lsv" class="big" style="min-height:68px">${edit?'Save changes':'Save my result'}</button></div>`;$('ov').classList.remove('hide');$('ovbar').classList.remove('hide');$('ov').scrollTop=0;
+ $('lb').onclick=()=>{$('ovbar').classList.add('hide');openMetric(id,true)};
+ $('ov').querySelectorAll('.seg[data-sk]').forEach(sg=>sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{LG.sel[sg.dataset.sk]=b.dataset.v;sg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}));
+ $('ov').querySelectorAll('select[data-sk]').forEach(s=>s.onchange=()=>LG.sel[s.dataset.sk]=s.value);
+ $('lsv').onclick=saveLog;const ld=$('ld');if(ld)ld.onclick=async()=>{if(!confirm('Delete this result? This cannot be undone.'))return;const {ok,j}=await api('/api/results/delete',{id:edit.id});if(ok){toast('Result deleted.');$('ovbar').classList.add('hide');openMetric(id,true)}else $('le').textContent=j.error||'Something went wrong.'}}
+async function saveLog(){const d=CUR.exercise.def;$('le').textContent='';const pv=mVal(d.primary,'pv'),sv=d.secondary?mVal(d.secondary,'sv'):'';
+ const body={exercise_id:LG.id,primary:pv,secondary:sv,selectors:LG.sel,day:$('dy').value,note:$('nt').value};if(LG.edit)body.id=LG.edit.id;
+ const {ok,j}=await api(LG.edit?'/api/results/update':'/api/results',body);if(!ok){$('le').textContent=j.error||'Something went wrong. Please try again.';return}
+ $('ovbar').classList.add('hide');await openMetric(LG.id,true);
+ if(j.pb){toast('⭐ New personal best! Wonderful work!');confetti(180)}else toast(LG.edit?'Changes saved ✔':'Result saved ✔ Great job!');celebrate(j.newBadges,j.pb)}
+function celebrate(nb,pb){if(!nb||!nb.length)return;const go=()=>{toast('🏅 New badge: '+nb[0].title+(nb.length>1?' (+'+(nb.length-1)+' more)':''));confetti(220)};if(pb)setTimeout(go,3600);else go()}
+
+// ---------- badges / me ----------
+async function drawBadges(){$('t-badges').innerHTML='<div class="card">Loading…</div>';const {j}=await api('/api/badges');const B=j.badges||[],n=B.filter(b=>b.earned).length;
+ $('t-badges').innerHTML=`<div class="card"><h2>My Badges 🏅</h2><p class="small" style="margin:0">${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>`<div class="bd ${b.earned?'got':''}"><span class="ic">${b.earned?b.icon:'🔒'}</span><b>${esc(b.title)}</b>${esc(b.desc)}${b.earned?'<div class="small">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`).join('')}</div>`}
+function drawMe(){$('t-me').innerHTML=`<div class="card"><h2>${esc(ME.name)}</h2><p class="small">Your results are private. No one else can see them, and there are no leaderboards.</p><button id="lo" class="alt">Log out</button></div><div class="card"><h3>Delete my account and data</h3><p class="small">This removes your account, your results and your badges for good.</p><button class="danger" id="da">Delete my account and data</button><div id="dc" class="hide"><label class="l" for="dp">Type your 4-digit PIN to confirm</label><input id="dp" type="tel" inputmode="numeric" maxlength="4" style="-webkit-text-security:disc"><div class="err" id="de" role="alert"></div><button class="danger" id="dy2">Yes, delete everything</button><button class="ghost" id="dn" style="margin-top:8px">No, keep my account</button></div></div>`;
+ $('lo').onclick=logout;$('da').onclick=()=>{$('dc').classList.remove('hide');$('da').classList.add('hide');$('dp').focus()};$('dn').onclick=()=>{$('dc').classList.add('hide');$('da').classList.remove('hide')};
+ $('dy2').onclick=async()=>{const {ok,j}=await api('/api/account/delete',{pin:$('dp').value});if(!ok){$('de').textContent=j.error||'Something went wrong.';return}ME=null;$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick();toast('Your account and data were deleted.')}}
+
+// ---------- confetti ----------
+function confetti(n){if(RM)return;const c=$('confetti'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;const cols=['#d4631c','#e3b04b','#ffffff','#0f1b3d','#f6d68b'];
+ const P=[...Array(n)].map(()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.4,vx:Math.random()*2-1,vy:2+Math.random()*4,r:5+Math.random()*8,c:cols[Math.random()*5|0],a:Math.random()*6}));let f=0;
+ (function step(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx+Math.sin(p.a+=.1);p.y+=p.vy;x.fillStyle=p.c;x.fillRect(p.x,p.y,p.r,p.r*1.5)});if(++f<200)requestAnimationFrame(step);else x.clearRect(0,0,c.width,c.height)})()}
+
+(async()=>{const {ok,j}=await api('/api/me');if(ok){ME=j;await start(false)}else $('login').classList.remove('hide')})();
+</script></body></html>
