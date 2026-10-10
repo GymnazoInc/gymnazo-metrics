@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Metrics admin · Gymnazo</title>
-<!-- admin-marker: gymnazo-metrics-admin-v2 import-v1 -->
+<!-- admin-marker: gymnazo-metrics-admin-v2 import-v1 members-v1 -->
 <style>
 body{font-family:system-ui,'Avenir Next',sans-serif;font-size:18px;background:#faf8f5;color:#2b2d33;margin:0}.w{max-width:760px;margin:0 auto;padding:14px}
 .top{background:#d4631c;color:#fff;padding:12px 16px;font-weight:700}
@@ -25,6 +25,8 @@ input,select,textarea{font:inherit;width:100%;padding:10px;min-height:48px;borde
 <label>Chart and personal best use</label><select id="hd"><option value="primary">Main measure</option><option value="secondary">Second measure</option></select></div>
 <h3>Choices (side, equipment, damper…)</h3><div class="s">One per line: key | question | option1, option2 | required yes/no | separate-chart yes/no</div><textarea id="sel" rows="4"></textarea>
 <div class="er" id="fe"></div><button id="sv">Save</button><button class="g" id="cx">Cancel</button></div>
+<div class="c"><h2>Members (names only)</h2><div class="s">Reset a forgotten PIN, or remove a member and all their data. A reset also applies on the Winter Solstice app if they have an account there. No scores or notes are shown here.</div>
+<label>Member</label><select id="mm_u"></select><label>New 4-digit PIN</label><input id="mm_p" inputmode="numeric" maxlength="4" placeholder="1234"><button id="mm_r">Reset PIN</button><button id="mm_d" class="r">Remove member…</button><div id="mm_o" class="s"></div></div>
 <div class="c"><h2>Import past results for a member</h2><div class="s">Choose the member, then paste or upload their CSV (columns: Date, Exercise, Result, Second result, Side / Hand / Foot, Equipment, Damper, Note). You see a preview first. Nothing is saved until you confirm. Existing results and notes are never shown here.</div>
 <label>Member</label><select id="im_u"></select><input type="file" id="im_f" accept=".csv,.txt"><textarea id="im_t" rows="6" placeholder="Date,Exercise,Result,..."></textarea><button id="im_p">Preview</button><div id="im_o"></div></div>
 <div class="c"><h2>Bulk import</h2><div class="s">Paste JSON like the file exercises.json: {"exercises":[{"name","description","category","primary":{"type","label","unit","better"},"secondary":null,"selectors":[]}]}. Names that already exist are skipped.</div><textarea id="bk" rows="8" placeholder='{"exercises":[...]}'></textarea><button id="pv">Preview</button><button id="im" class="g">Import</button><div id="bo" class="s"></div></div>
@@ -51,8 +53,12 @@ $('sv').onclick=async()=>{const sels=$('sel').value.split('\n').filter(l=>l.trim
  const {ok,j}=await A('/api/admin/save',{id:EID,name:$('n').value,description:$('d').value,category:$('cat').value,active:$('act').checked,def});if(!ok){$('fe').textContent=j.error||'Could not save';return}$('fm').classList.add('hide');load()};
 async function imp(dry){let t=$('bk').value;const {ok,j}=await A('/api/admin/import',{text:t,dry});$('bo').innerHTML=ok?`<b>${dry?'Preview':'Done'}:</b> ${j.added.length} ${dry?'would be added':'added'}, ${j.skipped.length} skipped (already exist)${j.bad.length?', '+j.bad.length+' problems: '+j.bad.map(b=>'item '+b.item+' ('+esc(b.error)+')').join('; '):''}`:`<span class="er">${esc(j.error||'Error')}</span>`;if(ok&&!dry)load()}
 
+
+function mmSel(){const o=$('mm_u').selectedOptions[0];return o&&o.value?{id:+o.value,name:o.textContent}:null}
+$('mm_r').onclick=async()=>{const m=mmSel();if(!m){$('mm_o').textContent='Please choose a member.';return}const pin=$('mm_p').value;if(!/^\d{4}$/.test(pin)){$('mm_o').textContent='The PIN must be exactly 4 digits.';return}if(!confirm('Set '+m.name+"'s PIN to "+pin+'? They will be logged out here.'))return;const {ok,j}=await A('/api/admin/members/reset-pin',{id:m.id,pin});$('mm_o').innerHTML=ok?'Done. Tell '+esc(m.name)+' their new PIN.'+(j.federated?' It is also being applied on the Winter Solstice app.':''):'<span class="er">'+esc(j.error||'Error')+'</span>';$('mm_p').value=''};
+$('mm_d').onclick=async()=>{const m=mmSel();if(!m){$('mm_o').textContent='Please choose a member.';return}const t=prompt('This deletes '+m.name+' and all their results for good. Type their name to confirm:');if(t===null)return;const {ok,j}=await A('/api/admin/members/delete',{id:m.id,confirm:t});$('mm_o').innerHTML=ok?'Removed.':'<span class="er">'+esc(j.error||'Error')+'</span>';if(ok)loadMem()};
 let IMF={};
-async function loadMem(){const {j}=await A('/api/admin/members');$('im_u').innerHTML='<option value="">Choose a member…</option>'+(j.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}
+async function loadMem(){const {j}=await A('/api/admin/members');const o='<option value="">Choose a member…</option>'+(j.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');$('im_u').innerHTML=o;$('mm_u').innerHTML=o}
 $('im_f').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>$('im_t').value=r.result;r.readAsText(f)};
 async function imPrev(reset){if(reset)IMF={};const u=$('im_u').value;if(!u){$('im_o').innerHTML='<span class="er">Please choose a member.</span>';return}
  const {ok,j}=await A('/api/admin/import-preview',{user_id:+u,text:$('im_t').value,fixes:IMF});if(!ok){$('im_o').innerHTML='<span class="er">'+esc(j.error||'Error')+'</span>';return}

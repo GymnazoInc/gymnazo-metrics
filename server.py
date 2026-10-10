@@ -1,5 +1,5 @@
 """Gymnazo Ability & Capacity Metrics: stdlib-only server (SQLite). Run: PORT=8090 DB_PATH=./metrics.db python3 server.py"""
-import http.server, socketserver, sqlite3, json, hashlib, hmac, secrets, os, time, re, math, threading, csv, io, difflib
+import federation, http.server, socketserver, sqlite3, json, hashlib, hmac, secrets, os, time, re, math, threading, csv, io, difflib
 from datetime import date, datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 from zoneinfo import ZoneInfo
@@ -44,6 +44,7 @@ seed()
 # ---------- helpers ----------
 def hp(pin, salt): return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200000).hex()
 def th(t): return hashlib.sha256(t.encode()).hexdigest()
+FED = federation.Fed(db, LOCK, hp)
 def clean(s, n):
     s = re.sub(r"<[^>]*>", "", str(s or "")); return re.sub(r"\s+", " ", s).strip()[:n]
 
@@ -515,10 +516,12 @@ class H(http.server.BaseHTTPRequestHandler):
     # ---- POST ----
     def do_POST(self):
         p = urlparse(self.path).path; b = self.body()
+        # shared-login federation + login/register take the lock themselves (they may call the peer app, never while holding it)
+        if p.startswith("/api/federation/"): return FED.handle(self, p, b)
+        if p == "/api/login": return self.login(b)
+        if p == "/api/register": return self.register(b)
         with LOCK:
             if p.startswith("/api/admin/"): return self.admin(p, b)
-            if p == "/api/login": return self.login(b)
-            if p == "/api/register": return self.register(b)
             if p == "/api/logout":
                 m = re.search(r"mx=([A-Za-z0-9_\-]+)", self.headers.get("Cookie", ""))
                 if m: db.execute("DELETE FROM sessions WHERE token_hash=?", (th(m.group(1)),))
@@ -547,32 +550,37 @@ class H(http.server.BaseHTTPRequestHandler):
         return name, pin
     def _session(self, uid, new):
         tok = secrets.token_urlsafe(32)
-        db.execute("INSERT INTO sessions VALUES(?,?,?)", (th(tok), uid, time.time()))
-        r = db.execute("SELECT id,name,picks_saved FROM users WHERE id=?", (uid,)).fetchone()
-        self.send(200, dict(self.me(r), new=new), cookie=f"mx={tok}; Path=/; Max-Age=7776000; HttpOnly; SameSite=Lax; Secure")
-    def login(self, b):  # log in only: never creates an account
+        with LOCK:
+            db.execute("INSERT INTO sessions VALUES(?,?,?)", (th(tok), uid, time.time()))
+            r = db.execute("SELECT id,name,picks_saved FROM users WHERE id=?", (uid,)).fetchone()
+            pl = dict(self.me(r), new=new)
+        self.send(200, pl, cookie=f"mx={tok}; Path=/; Max-Age=7776000; HttpOnly; SameSite=Lax; Secure")
+    def login(self, b):  # log in only: never creates an account on a failed login. Local check first, then the peer app.
         p = self._parse(b)
         if not p: return
-        name, pin = p; now = time.time()
-        bad = {"error": "That name or PIN doesn't match. Please try again."}
-        r = db.execute("SELECT id,salt,pin_hash,fails,locked_until FROM users WHERE name_key=?", (name.casefold(),)).fetchone()
-        if not r: return self.send(401, bad)
-        if r[4] > now: return self.send(429, {"error": "Too many tries. Please wait 5 minutes, then try again. Forgot your PIN? Ask the studio."})
-        if not hmac.compare_digest(hp(pin, r[1]), r[2]):
-            f = r[3] + 1
-            if f >= 5: db.execute("UPDATE users SET fails=0,locked_until=? WHERE id=?", (now + 300, r[0]))
-            else: db.execute("UPDATE users SET fails=? WHERE id=?", (f, r[0]))
-            return self.send(401, bad)
-        db.execute("UPDATE users SET fails=0 WHERE id=?", (r[0],)); self._session(r[0], False)
+        name, pin = p
+        r = FED.login(name, pin)
+        if r[0] == "ok": return self._session(r[1], r[2])
+        if r[0] == "locked": return self.send(429, {"error": "Too many tries. Please wait 5 minutes, then try again. Forgot your PIN? Ask the studio."})
+        msg = "That name or PIN doesn't match. Please try again."
+        if r[1]: msg += " (If you signed up on our other Gymnazo app, we can't check it right now. Please try again in a few minutes.)"
+        self.send(401, {"error": msg})
     def register(self, b):
         p = self._parse(b)
         if not p: return
         name, pin = p
-        if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone():
-            return self.send(409, {"error": "That name is already taken. If that's you, tap \"Log in\". If not, please pick a slightly different name (like adding your last initial)."})
-        salt = secrets.token_hex(16)
-        cur = db.execute("INSERT INTO users(name,name_key,salt,pin_hash,created) VALUES(?,?,?,?,?)", (name, name.casefold(), salt, hp(pin, salt), time.time()))
-        self._session(cur.lastrowid, True)
+        taken = {"error": "That name is already taken. If that's you, tap \"Log in\" and use the same PIN you picked before (it works on both Gymnazo apps). If not, please pick a slightly different name (like adding your last initial)."}
+        with LOCK:
+            if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone(): return self.send(409, taken)
+        c = FED.register_check(name)
+        if c[0] == "taken": return self.send(409, taken)
+        if c[0] == "peer_down": return self.send(503, {"error": "We can't finish creating your account right now. Please try again in a few minutes."})
+        salt = secrets.token_hex(16); now = time.time()
+        with LOCK:
+            if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone(): return self.send(409, taken)
+            cur = db.execute("INSERT INTO users(name,name_key,salt,pin_hash,created,pin_changed) VALUES(?,?,?,?,?,?)", (name, name.casefold(), salt, hp(pin, salt), now, now))
+            uid = cur.lastrowid
+        self._session(uid, True)
     def delete_account(self, usr, b):
         r = db.execute("SELECT salt,pin_hash FROM users WHERE id=?", (usr[0],)).fetchone()
         if not hmac.compare_digest(hp(str(b.get("pin", "")), r[0]), r[1]):
@@ -704,6 +712,27 @@ class H(http.server.BaseHTTPRequestHandler):
             return self.send(200, {"dry": bool(b.get("dry")), "added": [a[0] for a in added], "skipped": skipped, "bad": bad})
         if p == "/api/admin/members":  # names only: needed to pick who an import is for
             return self.send(200, {"members": [{"id": r[0], "name": r[1]} for r in db.execute("SELECT id,name FROM users ORDER BY name_key")]})
+        if p == "/api/admin/members/reset-pin":
+            pin = str(b.get("pin", ""))
+            if not re.fullmatch(r"\d{4}", pin): return self.send(400, {"error": "The new PIN must be exactly 4 digits."})
+            try: uid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "bad request"})
+            r = db.execute("SELECT name FROM users WHERE id=?", (uid,)).fetchone()
+            if not r: return self.send(404, {"error": "No such member."})
+            salt = secrets.token_hex(16); ph = hp(pin, salt); ts = time.time()
+            db.execute("UPDATE users SET salt=?,pin_hash=?,pin_changed=?,fails=0,locked_until=0 WHERE id=?", (salt, ph, ts, uid))
+            db.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+            FED.queue_pin(r[0], salt, ph, ts, have_lock=True)  # carried to the other Gymnazo app; retried in the background if it is unreachable
+            return self.send(200, {"ok": 1, "federated": federation.enabled()})
+        if p == "/api/admin/members/delete":
+            try: uid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "bad request"})
+            r = db.execute("SELECT name FROM users WHERE id=?", (uid,)).fetchone()
+            if not r: return self.send(404, {"error": "No such member."})
+            if str(b.get("confirm", "")).strip().casefold() != r[0].casefold(): return self.send(400, {"error": "Type the member's name exactly to confirm."})
+            for t in ("results", "tracked", "badges", "sessions"): db.execute(f"DELETE FROM {t} WHERE user_id=?", (uid,))
+            db.execute("DELETE FROM users WHERE id=?", (uid,))
+            return self.send(200, {"deleted": True})
         if p in ("/api/admin/import-preview", "/api/admin/import-confirm"):
             try: uid = int(b.get("user_id"))
             except Exception: return self.send(400, {"error": "Please choose a member."})
