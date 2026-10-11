@@ -34,7 +34,7 @@ try:
     s, j, _ = call("/api/login", {"name": "Alice", "pin": "0000"}); check("wrong pin -> same generic msg", s == 401 and "doesn't match" in j["error"])
     for _ in range(3): call("/api/login", {"name": "Alice", "pin": "0000"})
     s, j, _ = call("/api/login", {"name": "Alice", "pin": "0000"}); check("5th wrong -> still 401", s == 401)
-    s, j, _ = call("/api/login", {"name": "Alice", "pin": "1234"}); check("locked even with right pin (friendly msg)", s == 429 and "Ask the studio" in j["error"])
+    s, j, _ = call("/api/login", {"name": "Alice", "pin": "1234"}); check("locked even with right pin (friendly msg)", s == 429 and "any coach" in j["error"])
     _c=sqlite3.connect(DBP); _c.execute("update users set locked_until=0"); _c.commit(); _c.close()
     
     s, j, _ = call("/api/login", {"name": "Alice", "pin": "1234"}); check("login works after lock expiry", s == 200)

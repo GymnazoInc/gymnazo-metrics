@@ -30,7 +30,7 @@ Env vars: `PORT`, `HOST`, `DB_PATH` (SQLite file), `ADMIN_PASSWORD` (enables `/a
 Protected by `ADMIN_PASSWORD` (sent as the `X-Admin-Password` header). Manage the exercise library (add, edit, hide, reorder, metric types/units, choices), bulk-import exercises from JSON, and see aggregate counts only (members, results, most-tracked exercises). Individual scores are never shown.
 
 ## Login
-"I'm new" (name + 4-digit PIN, rejects existing names) and "I already signed up" (log in only, never creates an account). PINs are salted + PBKDF2 hashed; 5 wrong tries lock the account for 5 minutes. Forgot a PIN? Ask the studio.
+"I'm new" (name + 4-digit PIN, rejects existing names) and "I already signed up" (log in only, never creates an account). PINs are salted + PBKDF2 hashed; 5 wrong tries lock the account for 5 minutes. Forgot a PIN? Members email Memberservice@gymnazo.com or ask any coach.
 
 ## Exercise definition format (`exercises.json`)
 `name`, `description`, `category`, `primary` `{type, label, unit, better: higher|lower}`, optional `secondary` (+ `optional`), optional `selectors` `[{key,label,options,required,series}]` (series=true gives each choice its own chart/personal best), `headline` (`primary` or `secondary`, which measure drives the chart and personal best). Types: time, weight, reps, distance, height, power, number. Times are stored in seconds.
