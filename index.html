@@ -3,8 +3,17 @@
 <meta name="theme-color" content="#d4631c">
 <title>Gymnazo Ability &amp; Capacity Metrics</title>
 <!-- app-marker: gymnazo-metrics-v2 shared-login-v1 search-v1 import-v1 graph-v1 notes-v1 -->
+<link rel="preload" href="/fonts/AvenirNext-Regular.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/AvenirNext-DemiBold.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-:root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next LT Pro','Avenir Next','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
+/* Avenir Next (brand typeface; files supplied by Gymnazo), Latin subset */
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-UltraLight.woff2) format("woff2");font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-UltraLightItalic.woff2) format("woff2");font-weight:200;font-style:italic;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Medium.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-DemiBold.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+:root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next','Avenir Next LT Pro','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font-family:var(--sans);font-size:19px;line-height:1.45;color:var(--ink);background:var(--bg)}
 .top{background:var(--or);color:#fff;text-align:center;font-weight:600;padding:8px 12px;font-size:16px}
@@ -21,7 +30,7 @@ h2{font-family:var(--serif);font-weight:600;font-size:26px;margin:0 0 10px}h3{fo
 button{font:inherit;font-weight:700;font-size:20px;border:0;border-radius:16px;padding:14px 18px;min-height:60px;width:100%;cursor:pointer;background:var(--or);color:#fff;transition:transform .15s cubic-bezier(.3,1.8,.5,1);box-shadow:0 3px 0 rgba(0,0,0,.15)}
 button:active{transform:scale(.95)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:4px solid #2b6cb0;outline-offset:2px}
 button.alt{background:#fff;color:var(--or2);border:2px solid var(--or)}button.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}
-button.gold{background:var(--gold);color:var(--navy)}button.danger{background:#fff;color:#b3261e;border:2px solid #b3261e;box-shadow:none}
+button.gold{background:var(--gold);color:var(--ink)}button.danger{background:#fff;color:#b3261e;border:2px solid #b3261e;box-shadow:none}
 button.big{min-height:76px;font-size:24px;border-radius:20px}
 input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],select,textarea{width:100%;font-size:22px;min-height:60px;padding:10px 14px;border:3px solid #c9c2b8;border-radius:14px;margin:6px 0;font-family:inherit;color:var(--ink);background:#fff}
 textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;margin-top:14px}
@@ -41,8 +50,20 @@ textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;ma
 .msg{font-family:var(--serif);font-size:22px;margin:10px 0}
 .er{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.er .t{flex:1}.er button{width:auto;min-height:56px;padding:6px 16px;font-size:17px}
 .star{color:var(--gold)}
-.bg{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bd{border-radius:18px;padding:14px 8px;text-align:center;border:2px dashed #cbc4ba;background:#fff;font-size:16px}.bd .ic{font-size:44px;display:block;filter:grayscale(1) opacity(.4)}.bd.got{border:2px solid var(--gold);background:linear-gradient(#fff8e6,#fbe6b3);font-weight:700}.bd.got .ic{filter:none}.bd b{display:block;font-size:19px}
-#toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:var(--navy);color:#fff;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+/* Badges: Gymnazo brand guide (Avenir Next, Charcoal #58585b, logo rules) + palette sampled from new-facility photos (birch, oak, walnut, copper, sage, cladding); orange only as a hairline accent */
+:root{--stone:#f5efe7;--birch:#c7a894;--oak:#b9966c;--walnut:#9e7058;--copper:#9e7247;--sage:#66716a;--olive:#4f5a3a;--clad:#a8a6a3;--brown:#3a3430;--char:#58585b}
+.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:40px 22px;padding:40px 22px 46px;background:var(--stone);border-radius:4px;border:1px solid #e3dbcd;box-shadow:inset 0 0 0 7px var(--stone),inset 0 0 0 8px var(--birch)}
+.lxh{background:var(--brown);color:#f6f1e8;border-radius:4px;text-align:center;padding:34px 18px 28px;margin-bottom:14px}
+.lxh .ey{font:600 11.5px/1 var(--sans);letter-spacing:.42em;text-transform:uppercase;color:var(--birch)}
+.lxh h2{font:600 26px/1.15 var(--sans);letter-spacing:.32em;text-transform:uppercase;margin:16px 0 8px;color:#fff;padding-left:.32em}
+.lxh .rule{width:36px;height:1px;margin:16px auto;background:#d4631c}
+.lxh p{font:200 italic 16px/1.5 var(--sans);color:#e6dccb;margin:0;letter-spacing:.02em}
+.bd{text-align:center}.bd svg{width:118px;height:118px;display:block;margin:0 auto 18px;filter:drop-shadow(0 8px 14px rgba(74,64,56,.2))}
+.bd b{display:block;font:600 14.5px/1.3 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--brown);margin-bottom:7px}
+.bd .ds{font:400 13px/1.5 var(--sans);color:#6f665c;max-width:180px;margin:0 auto}
+.bd .dt{font:500 10.5px/1 var(--sans);letter-spacing:.28em;text-transform:uppercase;color:var(--sage);margin-top:11px}
+.bd:not(.got) b{color:#a8a6a3}.bd:not(.got) .ds{color:#b8b6b2}.bd:not(.got) svg{filter:none}
+#toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:#3a3430;color:#fff;border-bottom:2px solid #66716a;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #toast.show{display:block;animation:drop .4s cubic-bezier(.3,1.6,.5,1)}@keyframes drop{from{transform:translateY(-70px);opacity:0}}
 #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
 .gs{position:fixed;top:0;left:0;right:0;z-index:30;background:#fff;border-bottom:3px solid var(--or);padding:8px 10px;height:72px}.gs input{max-width:640px;display:block;margin:0 auto;min-height:56px;font-size:20px;border-color:var(--or)}
@@ -57,25 +78,81 @@ a.btn{display:block;text-align:center;text-decoration:none;font-weight:700;font-
 .hit:focus{outline:3px solid #2b6cb0}
 svg text{font-family:var(--sans)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ===== Gymnazo house style: brand guide (Avenir Next, Charcoal, logo rules) + facility earth tones.
+   Orange = one primary action per screen only. 8px spacing rhythm. Flat cards, hairline borders. ===== */
+:root{--or:#d4631c;--or2:#8a5a3c;--orl:#efe6d8;--ink:#3a3430;--mut:#6f665c;--bg:#f5efe7;--card:#fffdf9;--line:#e3d9ca;--gold:#9e7247;--ok:#4f5a3a;--warn:#9e7058;--serif:var(--sans)}
+body{font-size:18px;line-height:1.55;letter-spacing:.005em;font-feature-settings:"lnum" 1,"kern" 1}
+h2{font:600 22px/1.25 var(--sans);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px;color:var(--ink)}
+h3{font:600 16px/1.3 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.small{font-size:16px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:24px;margin:16px 0;box-shadow:none}
+button{font-weight:600;font-size:17px;letter-spacing:.06em;border-radius:6px;min-height:56px;padding:12px 24px;background:var(--ink);color:#fbf8f3;box-shadow:none;transition:background .2s ease,transform .2s ease}
+button:active{transform:scale(.98)}button:hover{background:#2a2521}
+button.pri,a.btn.pri{background:var(--or);color:#fff}button.pri:hover{background:#bd5616}
+button.alt,a.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--ink)}button.alt:hover{background:var(--orl)}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}button.gold{background:var(--gold);color:#fff}
+button.danger{border:1px solid #9e3b2c;color:#9e3b2c;background:transparent}
+button.big{min-height:64px;font-size:18px;border-radius:6px}
+a.btn{border-radius:6px;font-weight:600;letter-spacing:.06em;background:var(--ink);box-shadow:none;font-size:17px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--sage);outline-offset:3px}
+input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],select{border:0;border-bottom:1.5px solid var(--birch);border-radius:0;background:transparent;font-size:20px;padding:10px 4px;min-height:56px}
+input:focus,select:focus{border-bottom-color:var(--ink)}
+textarea{border:1px solid var(--line);border-radius:6px;padding:12px;background:#fffdf9;font-size:18px}
+label.l{font-weight:600;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-top:24px}
+.top{background:var(--ink);color:var(--birch);font-weight:500;font-size:12px;letter-spacing:.32em;text-transform:uppercase;padding:8px}
+.head{background:var(--bg);border-bottom:1px solid var(--line);padding:24px 16px 16px}.head h1{font:600 14px/1.3 var(--sans);letter-spacing:.26em;text-transform:uppercase;margin:16px 0 4px}.head p{font:200 italic 17px/1.4 var(--sans)}
+nav{background:var(--card);border-bottom:1px solid var(--line);gap:0;padding:0 8px}
+nav button{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--mut);min-height:64px;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;padding:8px 2px}
+nav button:hover{background:transparent;color:var(--ink)}nav button.act{background:transparent;color:var(--ink);border-bottom-color:var(--sage)}
+nav button .e{font-size:22px;line-height:1;margin-bottom:6px}
+.gs{background:var(--card);border-bottom:1px solid var(--line)}.gs input{border:1px solid var(--line);border-radius:6px;padding-left:44px;background:#fffdf9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f665c' stroke-width='1.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") 14px 50%/20px no-repeat;font-size:18px}
+.gr{border-radius:0 0 6px 6px;box-shadow:0 16px 32px rgba(58,52,48,.18)}.gi{background:var(--card)}.gi:active{background:var(--orl)}.tk{color:var(--ok)}.ad{color:var(--or2)}
+.chip{background:transparent;color:var(--sage);border:1px solid var(--line);border-radius:2px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+.mc .nm{font:600 20px/1.3 var(--sans);letter-spacing:.01em;margin:8px 0}.mc .row{gap:8px;margin-top:16px}
+.val{font:500 34px/1.1 var(--sans);letter-spacing:-.01em;color:var(--ink)}.trend.up{color:var(--ok)}.trend.down{color:var(--warn)}
+.cat{font:600 12.5px/1 var(--sans);letter-spacing:.26em;text-transform:uppercase;color:var(--sage);margin:40px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.ex{background:var(--card);border-radius:6px;padding:16px;margin:8px 0}.ex b{font-size:18px;font-weight:600}.ex.on{border-color:var(--sage);background:#f7f5ee}
+.seg button{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:6px;min-height:56px}.seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.pbcard{background:var(--card);border:1px solid var(--oak);border-radius:6px;padding:24px}.pbcard b{font:500 36px/1.1 var(--sans)}
+.msg{font:200 italic 21px/1.45 var(--sans)}
+.star{color:var(--copper)}.tiles>div{border-radius:6px;background:var(--card)}.tiles b{font:500 26px/1.2 var(--sans)}.tiles .pbt{background:#f7f1e6;border-color:var(--oak)}
+.pop{background:var(--card);border:1px solid var(--oak);border-radius:6px}.nt2{background:#f7f1e6;border-radius:4px}
+.ov{background:var(--bg)}.bar{background:var(--card);border-top:1px solid var(--line)}
+#toast{border-radius:6px;font-weight:500;font-size:17px;letter-spacing:.02em;padding:16px 24px}
+.ic{width:1.15em;height:1.15em;vertical-align:-.2em;display:inline-block;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.hero{position:relative;margin:16px 0;border-radius:6px;overflow:hidden;min-height:200px;display:flex;align-items:flex-end;background:#3a3430 center/cover no-repeat;color:#fff}
+.hero:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(58,52,48,.05) 20%,rgba(42,37,33,.8))}
+.hero .hx{position:relative;padding:24px}.hero .ey{font:600 11px/1 var(--sans);letter-spacing:.38em;text-transform:uppercase;color:var(--birch)}
+.hero h2{color:#fff;font-size:24px;letter-spacing:.22em;margin:8px 0 4px}.hero p{margin:0;font:200 italic 17px/1.4 var(--sans);color:#efe6d8}
+.empty{text-align:center;padding:40px 24px}.empty>.ic{width:44px;height:44px;color:var(--oak);stroke-width:1}.empty h3{margin:16px 0 8px}.empty p{color:var(--mut);margin:0 auto 24px;max-width:380px}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}.card,.hero,.bd{animation:rise .35s ease both}
+@keyframes sheen{from{transform:translateX(-120%) skewX(-18deg)}to{transform:translateX(320%) skewX(-18deg)}}
+#shine{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden;display:none}#shine.on{display:block}
+#shine:before{content:"";position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(246,230,204,.5),transparent);animation:sheen 1.1s ease-out}
+@media(min-width:900px){.wrap,.ov .in{max-width:760px}.hero{min-height:260px}.mc .row button{flex:0 1 auto}}
+button.ghost[id$="b"][style*="width:auto"]{border:0;min-height:48px;padding:8px 0;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}#shine{display:none!important}}
 </style></head><body>
-<canvas id="confetti"></canvas><div id="toast" role="status" aria-live="polite"></div>
-<div id="gs" class="gs hide"><input id="gq" type="text" placeholder="🔍 Search all exercises" aria-label="Search all exercises" autocomplete="off" enterkeyhint="search"><div id="gr" class="gr hide" role="listbox"></div></div>
+<canvas id="confetti"></canvas><div id="shine" aria-hidden="true"></div><div id="toast" role="status" aria-live="polite"></div>
+<div id="gs" class="gs hide"><input id="gq" type="text" placeholder="Search all exercises" aria-label="Search all exercises" autocomplete="off" enterkeyhint="search"><div id="gr" class="gr hide" role="listbox"></div></div>
 <div class="top">Move With Confidence</div>
 <div class="head"><img src="/logo.png" alt="Gymnazo"><h1>Ability &amp; Capacity Metrics</h1><p>Train for the decades ahead.</p></div>
 <div id="navw" class="hide"><nav><button data-t="home" class="act"><span class="e">📈</span>My Progress</button><button data-t="lib"><span class="e">🔍</span>Exercises</button><button data-t="badges"><span class="e">🏅</span>Badges</button><button data-t="me"><span class="e">👤</span>Me</button></nav></div>
 <div class="wrap">
 
 <div id="login" class="card hide">
- <div id="choose"><h2>Welcome! 👋</h2><p class="small" style="margin-top:0">Your results are private. Only you can see them.</p>
-  <div class="choice"><button class="big" id="pickNew">I'm new<small>Create my account</small></button><button class="alt big" id="pickOld">I already signed up<small>Log in</small></button></div></div>
+ <div id="choose"><h2>Welcome</h2><p class="small" style="margin-top:0">Your results are private. Only you can see them.</p>
+  <div class="choice"><button class="big pri" id="pickNew">I'm new<small>Create my account</small></button><button class="alt big" id="pickOld">I already signed up<small>Log in</small></button></div></div>
  <div id="formbox" class="hide"><h2 id="ftitle"></h2>
   <label class="l" for="name">Your name</label><input id="name" type="text" placeholder="Type your name" maxlength="24" autocomplete="username" autocapitalize="words">
   <label class="l" for="pin">Your 4-digit PIN <span class="small">(4 numbers)</span></label><input id="pin" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="current-password" style="-webkit-text-security:disc;letter-spacing:.4em">
-  <div class="err" id="lerr" role="alert"></div><button id="go" class="big"></button><p class="small" id="fhint"></p><button class="ghost" id="back">← Go back</button></div>
+  <div class="err" id="lerr" role="alert"></div><button id="go" class="big pri"></button><p class="small" id="fhint"></p><button class="ghost" id="back">← Go back</button></div>
  <p class="small" style="margin-bottom:0">Already signed up for the Winter Solstice Challenge? Use the same name and PIN here. Forgot your PIN? Email <a href="mailto:Memberservice@gymnazo.com" style="color:inherit;font-weight:700">Memberservice@gymnazo.com</a> or ask any coach.</p>
 </div>
 
 <div id="app" class="hide">
+ <div id="hero"></div>
  <div id="t-home"></div>
  <div id="t-lib" class="hide"></div>
  <div id="t-badges" class="hide"></div>
@@ -114,17 +191,19 @@ async function start(isNew){document.body.classList.add('in');$('gs').classList.
  if(isNew)toast('Welcome, '+ME.name+'! 🌱');if(!ME.picksSaved)openPicker(true)}
 async function loadLib(){const {ok,j}=await api('/api/exercises');if(ok)LIB=j}
 async function loadHome(){const {ok,j}=await api('/api/home');if(ok)HOME=j}
-function tab(t){TAB=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('act',b.dataset.t===t));['home','lib','badges','me'].forEach(x=>$('t-'+x).classList.toggle('hide',x!==t));scrollTo(0,0);({home:drawHome,lib:drawLib,badges:drawBadges,me:drawMe})[t]()}
+const HERO={home:['home','Gymnazo','My Progress','Train for the decades ahead.'],lib:['lib','Gymnazo','Exercises','Choose what you want to follow over time.'],me:['me','Gymnazo','My Account','Your results are private. Only you can see them.']};
+function drawHero(t){const x=HERO[t],el=$('hero');if(!el)return;el.innerHTML=x?`<div class="hero" style="background-image:url(/img/hero-${x[0]}.jpg)"><div class="hx"><div class="ey">${x[1]}</div><h2>${x[2]}</h2><p>${x[3]}</p></div></div>`:''}
+function tab(t){TAB=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('act',b.dataset.t===t));['home','lib','badges','me'].forEach(x=>$('t-'+x).classList.toggle('hide',x!==t));drawHero(t);scrollTo(0,0);({home:drawHome,lib:drawLib,badges:drawBadges,me:drawMe})[t]()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 function bySearch(e,q){q=q.trim().toLowerCase();return !q||(e.name+' '+e.description+' '+e.category).toLowerCase().indexOf(q)>-1}
 
 // ---------- home ----------
 let HQ='',HC='all';
 function spark(m){const v=m.spark||[];if(v.length<2)return '';const lo=Math.min(...v),hi=Math.max(...v),W=110,H=34,r=hi-lo||1;const pts=v.map((x,i)=>{const f=(x-lo)/r;return (4+i*(W-8)/(v.length-1)).toFixed(1)+','+(4+(m.better==='lower'?f:1-f)*(H-8)).toFixed(1)}).join(' ');const last=pts.split(' ').pop().split(',');
- return `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Small trend line"><polyline points="${pts}" fill="none" stroke="#d4631c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#d4631c"/></svg>`}
-function drawHome(){const H=HOME||{metrics:[],retest:[],recent:[]};let h=`<div class="card"><h2>Hi, ${esc(ME.name)}! 👋</h2><p class="small" style="margin:0">Only you can see your results.</p></div>`;
- if(H.retest.length)h+=`<div class="card" style="background:#fffaf6;border-color:var(--or)"><h3>Ready to test again? 🌿</h3><p class="small">It has been a while. Only if you feel like it:</p>${H.retest.slice(0,3).map(r=>`<div class="er"><div class="t"><b>${esc(r.name)}</b><div class="small">${Math.round(r.days/30)} months ago</div></div><button data-log="${r.id}">Log it</button></div>`).join('')}<button class="ghost" id="hideNudge" style="margin-top:10px">Not now</button></div>`;
- if(!H.metrics.length)h+=`<div class="card"><h2>Let's choose your metrics</h2><p>Pick the exercises you want to follow over time. You can change this any time.</p><button class="big" id="addM">＋ Choose my metrics</button></div><button class="alt big" id="impB">⬆ Import my past results</button>`;
+ return `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Small trend line"><polyline points="${pts}" fill="none" stroke="#5a4033" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="#66716a"/></svg>`}
+function drawHome(){const H=HOME||{metrics:[],retest:[],recent:[]};let h=`<div class="card"><h2>${greet()}, ${esc(ME.name)}</h2><p class="small" style="margin:0">Only you can see your results.</p></div>`;
+ if(H.retest.length)h+=`<div class="card" style="border-color:var(--oak)"><h3>Ready to test again?</h3><p class="small">It has been a while. Only if you feel like it:</p>${H.retest.slice(0,3).map(r=>`<div class="er"><div class="t"><b>${esc(r.name)}</b><div class="small">${Math.round(r.days/30)} months ago</div></div><button data-log="${r.id}">Log it</button></div>`).join('')}<button class="ghost" id="hideNudge" style="margin-top:10px">Not now</button></div>`;
+ if(!H.metrics.length)h+=`<div class="card empty">${IC('seed')}<h3>Your record begins here</h3><p>Choose the exercises you would like to follow. Each result you log becomes part of your story at Gymnazo.</p><button class="big pri" id="addM">Choose my metrics</button></div><button class="alt big" id="impB">⬆ Import my past results</button>`;
  else{if(H.recent&&H.recent.length)h+=`<div class="card"><b>Recently used</b><div class="rec">${H.recent.map(r=>`<button class="alt" data-open="${r.id}">${esc(r.name)}</button>`).join('')}</div></div>`;
   if(H.metrics.length>=5){const cats=[...new Set(H.metrics.map(m=>m.category))];h+=`<div class="card"><h3>My metrics (${H.metrics.length})</h3><input id="hq" type="text" placeholder="🔍 Search my metrics" aria-label="Search my metrics" value="${esc(HQ)}"><select id="hc" aria-label="Category"><option value="all">All categories</option>${cats.map(c=>`<option ${c===HC?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`}
   h+=`<div id="hl"></div><button class="alt big" id="addM">＋ Add metrics</button><button class="ghost big" id="impB" style="margin-top:10px">⬆ Import my past results</button>`}
@@ -134,7 +213,7 @@ function drawHome(){const H=HOME||{metrics:[],retest:[],recent:[]};let h=`<div c
  const a=$('addM');if(a)a.onclick=()=>openPicker(false);const ib=$('impB');if(ib)ib.onclick=openImport;
  const hn=$('hideNudge');if(hn)hn.onclick=async()=>{await api('/api/nudge/hide',{});await loadHome();drawHome()}}
 function drawHomeList(){const H=HOME||{metrics:[]};const q=HQ.trim().toLowerCase();const L=H.metrics.filter(m=>(HC==='all'||m.category===HC)&&(!q||(m.name+' '+m.category).toLowerCase().indexOf(q)>-1));const el=$('hl');if(!el)return;
- el.innerHTML=L.map(m=>{const hmz=hm(m.def);return `<div class="card mc"><span class="chip">${esc(m.category)}</span><div class="nm">${esc(m.name)}</div>`+(m.latest?`<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px"><div><div class="small">Latest · ${esc(fmtDay(m.latest.day))}${m.latest.series?' · '+esc(m.latest.series):''}</div><div class="val">${esc(fmt(hmz,m.latest.value))}</div></div>${spark(m)}</div><div class="small">Best: <b>${esc(fmt(hmz,m.best))}</b> ${m.isBest?'⭐':''} &nbsp; ${arrow(m.trend)}</div>`:`<div class="small">No results yet. Log your first one!</div>`)+`<div class="row"><button data-log="${m.id}">Log a result</button><button class="alt" data-open="${m.id}">📈 See graph</button></div></div>`}).join('')||(H.metrics.length?'<div class="card">No metrics match. Try fewer letters.</div>':'');
+ el.innerHTML=L.map(m=>{const hmz=hm(m.def);return `<div class="card mc"><span class="chip">${esc(m.category)}</span><div class="nm">${esc(m.name)}</div>`+(m.latest?`<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px"><div><div class="small">Latest · ${esc(fmtDay(m.latest.day))}${m.latest.series?' · '+esc(m.latest.series):''}</div><div class="val">${esc(fmt(hmz,m.latest.value))}</div></div>${spark(m)}</div><div class="small">Best: <b>${esc(fmt(hmz,m.best))}</b> ${m.isBest?'⭐':''} &nbsp; ${arrow(m.trend)}</div>`:`<div class="small" style="font-style:italic;font-weight:200">No results yet. Your first one sets the baseline.</div>`)+`<div class="row"><button data-log="${m.id}">Log a result</button><button class="alt" data-open="${m.id}">📈 See graph</button></div></div>`}).join('')||(H.metrics.length?'<div class="card empty">'+IC('search')+'<h3>Nothing matches</h3><p>Try fewer letters, or browse all exercises.</p></div>':'');
  el.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>openLog(+b.dataset.log));el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openMetric(+b.dataset.open))}
 
 // ---------- global search (always visible) ----------
@@ -150,7 +229,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('#gs'))gsClose(false)
 
 // ---------- library ----------
 let LQ='';
-function drawLib(){let h=`<div class="card"><h2>Exercises</h2><input id="lq" type="text" placeholder="🔍 Search exercises" aria-label="Search exercises" value="${esc(LQ)}"></div><div id="ll"></div>`;$('t-lib').innerHTML=h;$('lq').oninput=e=>{LQ=e.target.value;drawLibList()};drawLibList()}
+function drawLib(){let h=`<div class="card"><h2>Exercises</h2><input id="lq" type="text" placeholder="Search exercises" aria-label="Search exercises" value="${esc(LQ)}"></div><div id="ll"></div>`;$('t-lib').innerHTML=h;$('lq').oninput=e=>{LQ=e.target.value;drawLibList()};drawLibList()}
 function drawLibList(){const L=LIB.exercises.filter(e=>bySearch(e,LQ));let h='';
  for(const c of LIB.categories){const E=L.filter(e=>e.category===c);if(!E.length)continue;h+=`<div class="cat">${esc(c)}</div>`+E.map(e=>`<div class="ex ${e.tracked?'on':''}"><b>${esc(e.name)}</b><p>${esc(e.description)}</p>${e.tracked?`<div style="display:flex;gap:8px"><button class="alt" data-open="${e.id}">📈 See graph</button><button class="ghost" data-tg="${e.id}" data-v="0">Stop tracking</button></div>`:`<button data-tg="${e.id}" data-v="1">Track this</button>`}</div>`).join('')}
  $('ll').innerHTML=h||'<div class="card">No exercises match. Try fewer letters.</div>';
@@ -160,8 +239,8 @@ function drawLibList(){const L=LIB.exercises.filter(e=>bySearch(e,LQ));let h='';
 // ---------- picker ----------
 let PK=new Set(),PKQ='';
 function openPicker(first){PK=new Set(LIB.exercises.filter(e=>e.tracked).map(e=>e.id));PKQ='';
- $('ov').innerHTML=`<div class="in"><h2>${first?'Choose your metrics':'Add or remove metrics'}</h2><p class="small">${first?'Tick the exercises you want to follow over time. You can change this any time.':'Tick to add, untick to stop tracking. Your saved results are always kept.'}</p><input id="pq" type="text" placeholder="🔍 Search exercises" aria-label="Search exercises"><div id="pl"></div></div>`;
- $('ovbar').innerHTML=`<div class="in2">${first?'':'<button class="ghost" id="pc">Cancel</button>'}<button id="ps">Save</button></div>`;
+ $('ov').innerHTML=`<div class="in"><h2>${first?'Choose your metrics':'Add or remove metrics'}</h2><p class="small">${first?'Tick the exercises you want to follow over time. You can change this any time.':'Tick to add, untick to stop tracking. Your saved results are always kept.'}</p><input id="pq" type="text" placeholder="Search exercises" aria-label="Search exercises"><div id="pl"></div></div>`;
+ $('ovbar').innerHTML=`<div class="in2">${first?'':'<button class="ghost" id="pc">Cancel</button>'}<button id="ps" class="pri">Save</button></div>`;
  $('ov').classList.remove('hide');$('ovbar').classList.remove('hide');drawPicker();$('pq').oninput=e=>{PKQ=e.target.value;drawPicker()};
  if(!first)$('pc').onclick=closeOv;
  $('ps').onclick=async()=>{const {ok,j}=await api('/api/track',{ids:[...PK]});if(!ok){toast(j.error||'Something went wrong.');return}ME.picksSaved=true;await Promise.all([loadLib(),loadHome()]);closeOv();tab(TAB);toast('Saved! ✔');celebrate(j.newBadges)}}
@@ -173,7 +252,7 @@ function closeOv(){$('ov').classList.add('hide');$('ovbar').classList.add('hide'
 
 // ---------- metric page ----------
 let CUR=null,CURS=null,RANGE='all',SELPT=null;
-const PAL=['#d4631c','#2b6cb0','#2e7d4f','#8e44ad','#b8860b','#c0392b'];
+const PAL=['#5a4033','#66716a','#b9966c','#9e7058','#4f5a3a','#a8a6a3'];
 async function openMetric(id,keepSeries){const {ok,j}=await api('/api/metric?exercise_id='+id);if(!ok){toast(j.error||'Something went wrong.');return}CUR=j;SELPT=null;
  const lastSeries=j.results.length?j.results[j.results.length-1].series:'';if(!keepSeries||(CURS!=='__all__'&&!j.series.find(s=>s.label===CURS)))CURS=lastSeries;if(!keepSeries)RANGE='all';
  $('ov').classList.remove('hide');$('ovbar').classList.add('hide');drawMetric();$('ov').scrollTop=0}
@@ -200,8 +279,8 @@ function chartSvg(def,groups,better,rangeKey){const m=hm(def);const cut=rangeKey
   if(G.length===1&&g.pts.length>=3){const xs=g.pts.map(r=>(dms(r.day)-t0)/DAYMS),ys=g.pts.map(r=>r.h),n=xs.length,mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;let nu=0,de=0;xs.forEach((x,i)=>{nu+=(x-mx)*(ys[i]-my);de+=(x-mx)*(x-mx)});if(de>0){const k=nu/de,a=xs[0],b=xs[n-1];s+=`<line x1="${X(g.pts[0]).toFixed(1)}" y1="${Y(my+k*(a-mx)).toFixed(1)}" x2="${X(g.pts[n-1]).toFixed(1)}" y2="${Y(my+k*(b-mx)).toFixed(1)}" stroke="#2b6cb0" stroke-width="2.5" stroke-dasharray="7 6" opacity=".7"/>`}}
   if(g.pts.length>1)s+=`<polyline points="${pts}" fill="none" stroke="${g.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
   const best=g.pts.reduce((a,r)=>a==null||(better==='higher'?r.h>a.h:r.h<a.h)?r:a,null);
-  g.pts.forEach(r=>{const isb=r===best,sel=SELPT===r.id;s+=`<circle cx="${X(r).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="${isb?9:6}" fill="${isb?'#e3b04b':'#fff'}" stroke="${g.color}" stroke-width="${sel?5:3}"/>`});
-  s+=`<text x="${X(best).toFixed(1)}" y="${Math.max(12,Y(best.h)-14).toFixed(1)}" font-size="14" font-weight="700" text-anchor="middle" fill="#7a4a00">★ Best</text>`;
+  g.pts.forEach(r=>{const isb=r===best,sel=SELPT===r.id;s+=`<circle cx="${X(r).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="${isb?9:6}" fill="${isb?'#9e7247':'#fffdf9'}" stroke="${g.color}" stroke-width="${sel?5:3}"/>`});
+  s+=`<text x="${(X(best)>W-50?X(best)-14:X(best)).toFixed(1)}" y="${Math.max(12,Y(best.h)-16).toFixed(1)}" font-size="11" font-weight="600" text-anchor="${X(best)>W-50?'end':'middle'}" fill="#9e7247" letter-spacing="2">BEST</text>`;
   g.pts.forEach(r=>{s+=`<circle class="hit" data-pt="${r.id}" cx="${X(r).toFixed(1)}" cy="${Y(r.h).toFixed(1)}" r="19" fill="transparent" tabindex="0" role="button" aria-label="Result on ${esc(fmtDay(r.day))}: ${esc(fmt(m,r.h))}" style="cursor:pointer"/>`})});
  s+='</svg>';
  if(G.length>1)s+=`<div class="leg">${G.map(g=>`<span><i style="background:${g.color}"></i>${esc(g.label||'All')}</span>`).join('')}</div>`;
@@ -217,7 +296,7 @@ function drawMetric(){const j=CUR,d=j.exercise.def,m=hm(d),better=j.better;const
  const groups=j.series.filter(s=>compare||s===ser).map((s,i)=>({label:s.label,color:compare?PAL[i%PAL.length]:PAL[0],pts:j.results.filter(r=>r.series===s.label&&r.h!=null)}));
  let h=`<div class="in"><button class="ghost" id="mb" style="width:auto;margin-bottom:8px">← Back</button><span class="chip">${esc(j.exercise.category)}</span> ${j.tracked?'<span class="chip" style="background:#e3f3e8;color:#1f6b3d">✔ Tracking</span>':''}<h2 style="margin-top:6px">${esc(j.exercise.name)}</h2><p class="small">${esc(j.exercise.description)}</p>`;
  if(!j.tracked)h+=`<button class="alt big" id="mtk" style="margin-bottom:10px">＋ Track this</button>`;
- h+=`<button class="big" id="ml">Log a new result</button>`;
+ h+=`<button class="big pri" id="ml">Log a new result</button>`;
  if(!hasRes)h+=`<div class="card" style="text-align:center"><div style="font-size:48px">📈</div><h3>Log your first result to see your graph</h3><p class="small">It only takes a minute. Your graph grows with every result.</p></div>`;
  else{if(j.series.length>1)h+=`<div class="card"><b>Show results for:</b><div class="seg" style="margin-top:8px">${j.series.map(s=>`<button data-sr="${esc(s.label)}" class="${!compare&&s.label===ser.label?'on':''}">${esc(s.label||'All')}</button>`).join('')}<button data-sr="__all__" class="${compare?'on':''}">Compare all</button></div></div>`;
   h+=`<div class="card"><div class="seg rng">${[['3m','3 months'],['1y','1 year'],['all','All time']].map(([k,l])=>`<button data-rg="${k}" class="${RANGE===k?'on':''}">${l}</button>`).join('')}</div>`;
@@ -226,7 +305,7 @@ function drawMetric(){const j=CUR,d=j.exercise.def,m=hm(d),better=j.better;const
   if(ser)h+=`<div class="tiles"><div><span class="small">First</span><b>${esc(fmt(m,ser.first.value))}</b><span class="small">${esc(fmtDay(ser.first.day))}</span></div><div><span class="small">Latest</span><b>${esc(fmt(m,ser.latest.value))}</b><span class="small">${esc(fmtDay(ser.latest.day))}</span></div><div class="pbt"><span class="small">⭐ Best</span><b>${esc(fmt(m,ser.best.value))}</b><span class="small">${esc(fmtDay(ser.best.day))}</span></div><div><span class="small">Results</span><b>${ser.count}</b><span class="small">saved</span></div></div>`;
   else h+=`<div class="tiles"><div><span class="small">Results</span><b>${j.results.length}</b><span class="small">in total</span></div></div>`;
   if(d.headline==='secondary')h+=`<p class="small">Tracking: ${esc(m.label)} at the ${esc(d.primary.label.toLowerCase())} you chose.</p>`}
- h+=`<div class="card"><h3>My results</h3>${hasRes?[...j.results].reverse().filter(r=>compare||!ser||r.series===ser.label).map(r=>`<div class="en"><div><b>${resLine(d,r)}</b> ${r.isPb?'<span class="star">⭐ Personal best</span>':''}</div><div class="small">${esc(fmtDay(r.day))}${selTxt(d,r.sel)?' · '+selTxt(d,r.sel):''}</div>${noteBlock(r,r.id)}<button class="alt" data-ed="${r.id}" style="margin-top:6px">Edit result</button></div>`).join(''):'<p class="small">Nothing yet.</p>'}</div>`;
+ h+=`<div class="card"><h3>My results</h3>${hasRes?[...j.results].reverse().filter(r=>compare||!ser||r.series===ser.label).map(r=>`<div class="en"><div><b>${resLine(d,r)}</b> ${r.isPb?'<span class="star">⭐ Personal best</span>':''}</div><div class="small">${esc(fmtDay(r.day))}${selTxt(d,r.sel)?' · '+selTxt(d,r.sel):''}</div>${noteBlock(r,r.id)}<button class="alt" data-ed="${r.id}" style="margin-top:6px">Edit result</button></div>`).join(''):'<div class="empty">'+IC('seed')+'<h3>No results yet</h3><p>Log your first result and your progress will begin to take shape here.</p></div>'}</div>`;
  h+=j.tracked?`<button class="ghost" id="mt" style="margin-top:6px">Stop tracking this</button><p class="small">Your saved results are kept if you stop.</p>`:'';
  $('ov').innerHTML=h+'</div>';
  $('mb').onclick=async()=>{closeOv();await Promise.all([loadHome(),loadLib()]);tab(TAB)};$('ml').onclick=()=>openLog(j.exercise.id);
@@ -257,7 +336,7 @@ async function openLog(id,edit){if(!CUR||CUR.exercise.id!==id){const {ok,j}=awai
  if(d.secondary)h+=`<label class="l">${esc(d.secondary.label)}${d.secondary.optional?'':''}</label>${mInput(d.secondary,edit&&edit.s!=null?edit.s:null,'sv')}`;
  if(d.third)h+=`<label class="l">${esc(d.third.label)}</label>${mInput(d.third,edit&&edit.t!=null?edit.t:null,'tv')}`;
  h+=`<label class="l" for="dy">Date</label><input id="dy" type="date" value="${edit?edit.day:ME.today}" max="${ME.today}"><label class="l" for="nt">Your private note <span class="small">(only you can see it)</span></label><textarea id="nt" maxlength="500" rows="5" placeholder="How did it feel? Any notes for next time?">${edit?esc(edit.note):''}</textarea><div class="small" id="nc"></div><div class="err" id="le" role="alert"></div>`+(edit?`<button class="danger" id="ld" style="margin-top:10px">Delete this result</button>`:'')+`</div>`;
- $('ov').innerHTML=h;$('ovbar').innerHTML=`<div class="in2"><button id="lsv" class="big" style="min-height:68px">${edit?'Save changes':'Save my result'}</button></div>`;$('ov').classList.remove('hide');$('ovbar').classList.remove('hide');$('ov').scrollTop=0;
+ $('ov').innerHTML=h;$('ovbar').innerHTML=`<div class="in2"><button id="lsv" class="big pri" style="min-height:68px">${edit?'Save changes':'Save my result'}</button></div>`;$('ov').classList.remove('hide');$('ovbar').classList.remove('hide');$('ov').scrollTop=0;
  $('lb').onclick=()=>{$('ovbar').classList.add('hide');openMetric(id,true)};
  $('ov').querySelectorAll('.seg[data-sk]').forEach(sg=>sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{LG.sel[sg.dataset.sk]=b.dataset.v;sg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}));
  $('ov').querySelectorAll('select[data-sk]').forEach(s=>s.onchange=()=>LG.sel[s.dataset.sk]=s.value);
@@ -294,17 +373,54 @@ function drawImportPreview(){const R=IMP.res,rows=R.rows,ok=rows.filter(r=>r.sta
  $('ov').querySelectorAll('[data-fx]').forEach(s=>s.onchange=()=>{if(s.value){IMP.fixes[s.dataset.fx]=+s.value;previewImport()}});
  $('ic').onclick=async()=>{if(!ok.length)return;$('ic').disabled=true;$('ic').textContent='Importing…';const {ok:o,j}=await api('/api/import/confirm',{text:IMP.text,fixes:IMP.fixes});if(!o){toast(j.error||'Something went wrong.');$('ic').disabled=false;return}
   $('ovbar').classList.add('hide');await Promise.all([loadLib(),loadHome()]);importDone(j)}}
-function importDone(j){confetti(160);$('ov').innerHTML=`<div class="in"><div class="card" style="text-align:center"><div style="font-size:56px">🎉</div><h2>All done!</h2><p style="font-size:22px">We imported <b>${j.imported}</b> result${j.imported===1?'':'s'}.</p><p class="small">${j.counts.duplicate?j.counts.duplicate+' already saved were skipped. ':''}${j.counts.problem?j.counts.problem+' rows were skipped because of problems.':''}</p>${j.newBadges.length?`<h3>New badges</h3><div class="bg">${j.newBadges.map(b=>`<div class="bd got"><span class="ic">${b.icon}</span><b>${esc(b.title)}</b>${esc(b.desc)}</div>`).join('')}</div>`:''}<button class="big" id="idn" style="margin-top:16px">See my progress</button></div></div>`;$('idn').onclick=()=>{closeOv();tab('home')}}
+function importDone(j){confetti(160);$('ov').innerHTML=`<div class="in"><div class="card" style="text-align:center"><div style="font-size:56px">🎉</div><h2>All done!</h2><p style="font-size:22px">We imported <b>${j.imported}</b> result${j.imported===1?'':'s'}.</p><p class="small">${j.counts.duplicate?j.counts.duplicate+' already saved were skipped. ':''}${j.counts.problem?j.counts.problem+' rows were skipped because of problems.':''}</p>${j.newBadges.length?`<h3>New badges</h3><div class="bg">${j.newBadges.map(b=>badgeTile(b,true)).join('')}</div>`:''}<button class="big" id="idn" style="margin-top:16px">See my progress</button></div></div>`;$('idn').onclick=()=>{closeOv();tab('home')}}
 
+// ---------- line-art icons (replace emoji everywhere they render) ----------
+const ICP={chart:'M4 19h16M6 16l4-5 3 3 5-7',search:'M11 11m-6.5 0a6.5 6.5 0 1013 0 6.5 6.5 0 10-13 0M16 16l4.5 4.5',medal:'M12 14m-5 0a5 5 0 1010 0 5 5 0 10-10 0M9 3l3 6 3-6M12 12.5v3',user:'M12 8m-3.5 0a3.5 3.5 0 107 0 3.5 3.5 0 10-7 0M5 20c1-4 4-6 7-6s6 2 7 6',
+ note:'M6 4h9l3 3v13H6zM9 10h6M9 13h6M9 16h4',star:'M12 4l2.2 5 5.3.5-4 3.6 1.2 5.3L12 15.6 7.3 18.4l1.2-5.3-4-3.6 5.3-.5z',check:'M5 12.5l4.5 4.5L19 7.5',up:'M12 19V6M7 11l5-5 5 5',down:'M12 5v13M7 13l5 5 5-5',edit:'M5 19l1-4L15.5 5.5l3 3L9 18zM13.5 7.5l3 3',
+ seed:'M12 20V11M12 11c0-4 3-6 6-6 0 4-3 6-6 6zM12 13c0-3-2.5-5-5.5-5 0 3 2.5 5 5.5 5z',hand:'M7 11V7a1.5 1.5 0 013 0v4M10 10V5.5a1.5 1.5 0 013 0V10M13 10V6.5a1.5 1.5 0 013 0V13c0 4-2 7-5 7s-5-2-6-5',spark:'M12 4v4M12 16v4M4 12h4M16 12h4M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2',
+ list:'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',warn:'M12 4l9 16H3zM12 10v4M12 17h.01'};
+function IC(n){return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICP[n]||ICP.star}"/></svg>`}
+const EMO={'📈':'chart','🔍':'search','🏅':'medal','👤':'user','📝':'note','⭐':'star','★':'star','✔':'check','⬆':'up','⬇':'down','✏':'edit','🌱':'seed','🌿':'seed','👋':'hand','🎉':'spark','📋':'list','⚠':'warn','🔥':'spark','💪':'hand','🏆':'medal','🎯':'star','🧭':'chart','🥇':'medal','🥈':'medal','🥉':'medal','📅':'list','🚀':'up'};
+const EMORE=new RegExp('('+Object.keys(EMO).join('|')+')\uFE0F?','gu');
+function deEmoji(root){if(!root||!root.nodeType)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),hits=[];let n;while(n=w.nextNode()){const p=n.parentNode;if(!p||/^(SCRIPT|STYLE|TEXTAREA|OPTION|TITLE)$/.test(p.nodeName)||p.closest('svg'))continue;EMORE.lastIndex=0;if(EMORE.test(n.nodeValue))hits.push(n)}
+ hits.forEach(t=>{const sp=document.createElement('span');sp.innerHTML=esc(t.nodeValue).replace(EMORE,m=>IC(EMO[m.replace(/\uFE0F/g,'')]||'star'));t.replaceWith(...sp.childNodes)})}
+new MutationObserver(ms=>{for(const m of ms){m.addedNodes.forEach(x=>{if(x.nodeType===1)deEmoji(x);else if(x.nodeType===3&&x.parentNode)deEmoji(x.parentNode)});if(m.type==='characterData'||(m.target&&m.target.id==='toast'))deEmoji(m.target.nodeType===1?m.target:m.target.parentNode)}}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+deEmoji(document.body);
+function greet(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
 // ---------- badges / me ----------
+// Luxury medallions: one inline SVG per badge (gold-foil rings, beaded inner ring, thin-line emblem).
+const GLY={seed:'M12 20V11M12 11c0-4 3-6 6-6 0 4-3 6-6 6zM12 13c0-3-2.5-5-5.5-5 0 3 2.5 5 5.5 5z',star:'M12 4l2.2 5 5.3.5-4 3.6 1.2 5.3L12 15.6 7.3 18.4l1.2-5.3-4-3.6 5.3-.5z',
+ n:'',comp:'M12 4v16M4 12h16M12 4l2 8-2 8-2-8z',cal:'M5 7h14v12H5zM5 10h14M9 5v4M15 5v4',peak:'M3 19l6-10 4 6 3-4 5 8z',cup:'M8 4h8v5a4 4 0 01-8 0zM8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M9 20h6',
+ flame:'M12 21c-4 0-6-3-6-6 0-4 4-6 4-10 3 2 5 5 5 8 1-1 1-2 1-3 2 2 2 4 2 5 0 3-2 6-6 6z',up:'M4 18l6-6 4 4 6-8M15 8h5v5',rkt:'M12 3c3 2 4 6 4 10l-4 3-4-3c0-4 1-8 4-10zM8 13l-3 4h4M16 13l3 4h-4M12 9.5v.1',
+ grip:'M7 11V7a1.5 1.5 0 013 0v4M10 10V5.5a1.5 1.5 0 013 0V10M13 10V6.5a1.5 1.5 0 013 0V13c0 4-2 7-5 7s-5-2-6-5l-1-3a1.5 1.5 0 012.6-1.4L7 12',
+ oar:'M3 16c3 2 6 2 9 0s6-2 9 0M6 13L18 5M17 4l3 2-2 1',road:'M9 4L5 20M15 4l4 16M12 6v2M12 11v2M12 16v2',orb:'M12 12m-4 0a4 4 0 108 0 4 4 0 10-8 0M3 13c3-3 15-5 18-2M12 3v2M12 19v2',
+ sprg:'M7 20h10M8 17l8-2-8-2 8-2-8-2 8-2M12 7V3M10 5l2-2 2 2',bar:'M3 12h18M6 8v8M9 9v6M18 8v8M15 9v6',wave:'M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0',lotus:'M12 18c-4 0-7-2-8-5 3 0 6 1 8 5zM12 18c4 0 7-2 8-5-3 0-6 1-8 5zM12 18c-2-3-2-7 0-11 2 4 2 8 0 11z',
+ bolt:'M13 3L6 13h5l-1 8 7-10h-5z',batt:'M5 8h12v8H5zM17 10.5h2v3h-2M8 10v4M11 10v4'};
+const BG={first_result:'seed',first_pb:'star',results3:'n3',results5:'n5',results10:'n10',track5:'comp',track10:'star',months3:'cal',months6:'peak',months12:'cup',streak3:'flame',improve10:'up',improve25:'rkt',
+ combo_iron_grip:'grip',combo_row_boat:'oar',combo_miles:'road',combo_gravity:'orb',combo_spring:'sprg',combo_big_three:'bar',combo_flow:'wave',combo_unshakeable:'lotus',combo_energizer:'batt',combo_power_surge:'bolt'};
+const ROMAN={n3:'III',n5:'V',n10:'X'};
+function medal(b,got){const id='m'+b.code,k=BG[b.code]||'star',beads=[...Array(40)].map((_,i)=>{const a=i*9*Math.PI/180;return `<circle cx="${(60+42*Math.cos(a)).toFixed(2)}" cy="${(60+42*Math.sin(a)).toFixed(2)}" r=".85"/>`}).join('');
+ // earned: brushed-copper rim (facility pendant #9e7247), sage enamel ring (tile #66716a), walnut emblem on ivory; locked: cladding-grey line work
+ const rim=got?`url(#${id}s)`:'#d9d6d1',line=got?'#b9966c':'#e2ded8',emb=got?'#5a4033':'#bdbab5',enamel=got?'#66716a':'#ebe8e3';
+ const mark=ROMAN[k]?`<text x="60" y="69" text-anchor="middle" font-family="Avenir Next LT Pro,Avenir Next,Outfit,sans-serif" font-size="25" font-weight="600" letter-spacing="3" fill="${emb}">${ROMAN[k]}</text>`
+  :`<g transform="translate(42 42) scale(1.5)" fill="none" stroke="${emb}" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><path d="${GLY[k]}"/></g>`;
+ return `<svg viewBox="0 0 120 120" role="img" aria-label="${esc(b.title)}"><defs>
+ <linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecd5b4"/><stop offset=".3" stop-color="#9e7247"/><stop offset=".52" stop-color="#f6e6cc"/><stop offset=".78" stop-color="#6b4a2e"/><stop offset="1" stop-color="#c7a894"/></linearGradient></defs>
+ <circle cx="60" cy="60" r="57" fill="${rim}"/><circle cx="60" cy="60" r="53.5" fill="#fbf8f3"/>
+ <circle cx="60" cy="60" r="52" fill="none" stroke="${enamel}" stroke-width="2.4"/>
+ <circle cx="60" cy="60" r="49.5" fill="#fbf8f3" stroke="${line}" stroke-width=".6"/>
+ <g fill="${line}">${beads}</g><circle cx="60" cy="60" r="37" fill="none" stroke="${line}" stroke-width=".5"/>
+ ${mark}${got?'':`<g transform="translate(53 83)" fill="none" stroke="#a8a6a3" stroke-width=".9"><rect x="1" y="5" width="12" height="9" rx="1"/><path d="M4 5V3a3 3 0 016 0v2"/></g>`}</svg>`}
+function badgeTile(b,got){return `<div class="bd ${got?'got':''}">${medal(b,got)}<b>${esc(b.title)}</b><div class="ds">${esc(b.desc)}</div>${got&&b.at?'<div class="dt">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`}
 async function drawBadges(){$('t-badges').innerHTML='<div class="card">Loading…</div>';const {j}=await api('/api/badges');const B=j.badges||[],n=B.filter(b=>b.earned).length;
- $('t-badges').innerHTML=`<div class="card"><h2>My Badges 🏅</h2><p class="small" style="margin:0">${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>`<div class="bd ${b.earned?'got':''}"><span class="ic">${b.earned?b.icon:'🔒'}</span><b>${esc(b.title)}</b>${esc(b.desc)}${b.earned?'<div class="small">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`).join('')}</div>`}
+ $('t-badges').innerHTML=`<div class="lxh" style="background:linear-gradient(rgba(42,37,33,.55),rgba(42,37,33,.86)),url(/img/hero-badges.jpg) center/cover"><div class="ey">Gymnazo</div><h2>Badges</h2><div class="rule"></div><p>${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>badgeTile(b,b.earned)).join('')}</div>`}
 function drawMe(){$('t-me').innerHTML=`<div class="card"><h2>${esc(ME.name)}</h2><p class="small">Your results are private. No one else can see them, and there are no leaderboards.</p><button id="lo" class="alt">Log out</button></div><div class="card"><h3>My results file</h3><p class="small">Bring in past results, or save a copy of all your results (with your notes) as a spreadsheet file.</p><button id="mi" class="big">⬆ Import my past results</button><a class="btn alt" href="/api/export.csv" download style="margin-top:10px">⬇ Download my results (CSV)</a></div><div class="card"><h3>Delete my account and data</h3><p class="small">This removes your account, your results and your badges here for good. Your login still works on the other Gymnazo app.</p><button class="danger" id="da">Delete my account and data</button><div id="dc" class="hide"><label class="l" for="dp">Type your 4-digit PIN to confirm</label><input id="dp" type="tel" inputmode="numeric" maxlength="4" style="-webkit-text-security:disc"><div class="err" id="de" role="alert"></div><button class="danger" id="dy2">Yes, delete everything</button><button class="ghost" id="dn" style="margin-top:8px">No, keep my account</button></div></div>`;
  $('lo').onclick=logout;$('mi').onclick=openImport;$('da').onclick=()=>{$('dc').classList.remove('hide');$('da').classList.add('hide');$('dp').focus()};$('dn').onclick=()=>{$('dc').classList.add('hide');$('da').classList.remove('hide')};
  $('dy2').onclick=async()=>{const {ok,j}=await api('/api/account/delete',{pin:$('dp').value});if(!ok){$('de').textContent=j.error||'Something went wrong.';return}ME=null;appOff();closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick();toast('Your account and data were deleted.')}}
 
 // ---------- confetti ----------
-function confetti(n){if(RM)return;const c=$('confetti'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;const cols=['#d4631c','#e3b04b','#ffffff','#0f1b3d','#f6d68b'];
+function confetti(n){if(RM)return;const sh=$('shine');if(sh){sh.classList.remove('on');void sh.offsetWidth;sh.classList.add('on');setTimeout(()=>sh.classList.remove('on'),1200)}return;const c=$('confetti'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;const cols=['#d4631c','#e3b04b','#ffffff','#0f1b3d','#f6d68b'];
  const P=[...Array(n)].map(()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.4,vx:Math.random()*2-1,vy:2+Math.random()*4,r:5+Math.random()*8,c:cols[Math.random()*5|0],a:Math.random()*6}));let f=0;
  (function step(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx+Math.sin(p.a+=.1);p.y+=p.vy;x.fillStyle=p.c;x.fillRect(p.x,p.y,p.r,p.r*1.5)});if(++f<200)requestAnimationFrame(step);else x.clearRect(0,0,c.width,c.height)})()}
 
