@@ -32,5 +32,7 @@ check("snatch old result attached, backfilled Kettlebell", rs and json.loads(rs[
 check("old result still attached, backfilled Kettlebell", r[0] == eid and json.loads(r[1]) == {"hand": "Right Hand", "equipment": "Kettlebell"})
 bd = json.loads(c.execute("SELECT def FROM exercises WHERE name='Bench Press Strength'").fetchone()[0])
 check("bench strength reps added, equipment kept", bd["secondary"]["type"] == "reps" and bd["selectors"][0]["key"] == "equipment")
+sq = json.loads(c.execute("SELECT def FROM exercises WHERE name='Back Squat Strength'").fetchone()[0])
+check("back squat strength reps added", sq["secondary"]["type"] == "reps" and sq["secondary"]["optional"] is False)
 check("exercise count unchanged", c.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == len(old["exercises"]))
 sys.exit(1 if F else 0)

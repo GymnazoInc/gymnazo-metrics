@@ -651,7 +651,7 @@
   },
   {
    "name": "Back Squat Strength",
-   "description": "Squat with the barbell on your back in a squat rack. Your best weight for a 1 to 3 rep max.",
+   "description": "Squat with the barbell on your back in a squat rack. Your best weight for a 1 to 3 rep max. Record the weight and how many reps you got.",
    "category": "Strength",
    "primary": {
     "type": "weight",
@@ -659,7 +659,12 @@
     "unit": "lb",
     "better": "higher"
    },
-   "secondary": null,
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
    "selectors": [
     {
      "key": "equipment",

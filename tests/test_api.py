@@ -102,6 +102,10 @@ try:
     s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "selectors": {"hand": "Right Hand", "equipment": "FitFighter"}, "day": "2026-06-02"}, ckA); check("snatch log ok", s == 200)
     s, m, _ = call(f"/api/metric?exercise_id={sn}", cookie=ckA); check("snatch equipment stored", any(r["sel"].get("equipment") == "FitFighter" for r in m["results"]))
     s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Side / Hand / Foot,Equipment\n2025-01-01,Kettlebell Single Arm Snatch,26,Right Hand,Kettlebell"}, ckA); check("CSV with old KB snatch name maps", s == 200 and j["counts"]["ok"] == 1, j)
+    bq = ex["Back Squat Strength"]["id"]; sels = {x["key"]: x["options"][0] for x in ex["Back Squat Strength"]["def"]["selectors"]}
+    s, j, _ = call("/api/results", {"exercise_id": bq, "primary": 185, "selectors": sels, "day": "2026-06-02"}, ckA); check("back squat strength reps required", s == 400)
+    s, j, _ = call("/api/results", {"exercise_id": bq, "primary": 185, "secondary": 2, "selectors": sels, "day": "2026-06-02"}, ckA); check("back squat strength log with reps", s == 200)
+    s, m, _ = call(f"/api/metric?exercise_id={bq}", cookie=ckA); check("back squat reps stored", any(r["s"] == 2 for r in m["results"]))
     bp = ex["Bench Press Strength"]["id"]
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength reps required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "secondary": 3, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength log with reps", s == 200)

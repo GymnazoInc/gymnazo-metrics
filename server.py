@@ -91,6 +91,21 @@ def migrate_sasn():
     db.execute("COMMIT")
 migrate_sasn()
 
+def migrate_bss_reps():
+    """Add required reps to Back Squat Strength (same as Bench Press Strength). Only fills a missing second measure."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_bss_reps_v1'").fetchone(): return
+    src = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
+    e = next(x for x in src["exercises"] if x["name"] == "Back Squat Strength")
+    db.execute("BEGIN")
+    for eid, dj in db.execute("SELECT id,def FROM exercises WHERE name='Back Squat Strength'").fetchall():
+        d = json.loads(dj)
+        if not d.get("secondary"):
+            d["secondary"] = e["secondary"]
+            db.execute("UPDATE exercises SET description=?,def=? WHERE id=?", (e["description"], json.dumps(d), eid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_bss_reps_v1','1')")
+    db.execute("COMMIT")
+migrate_bss_reps()
+
 # ---------- helpers ----------
 def hp(pin, salt): return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200000).hex()
 def th(t): return hashlib.sha256(t.encode()).hexdigest()
