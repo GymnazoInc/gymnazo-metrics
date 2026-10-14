@@ -41,6 +41,34 @@ def seed():
     db.execute("INSERT OR REPLACE INTO meta VALUES('seeded','1')")
 seed()
 
+# ---------- migrations (additive, idempotent, keyed in meta) ----------
+SAOP_OLD, SAOP_NEW = "Kettlebell Single Arm Overhead Press", "Single Arm Overhead Press"
+def migrate_saop():
+    """Rename KB Single Arm OHP, add required reps + equipment choice. Results stay linked by exercise_id;
+    existing entries were all kettlebell, so they get equipment=Kettlebell (only if missing) to keep their chart/PB series."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_saop_v1'").fetchone(): return
+    src = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
+    e = next(x for x in src["exercises"] if x["name"] == SAOP_NEW)
+    nd = {k: e.get(k) for k in ("primary", "secondary", "selectors", "headline")}
+    db.execute("BEGIN")
+    for (eid,) in db.execute("SELECT id FROM exercises WHERE name IN (?,?)", (SAOP_OLD, SAOP_NEW)).fetchall():
+        db.execute("UPDATE exercises SET name=?,description=?,def=? WHERE id=?", (SAOP_NEW, e["description"], json.dumps(nd), eid))
+        for rid, sj in db.execute("SELECT id,selectors FROM results WHERE exercise_id=?", (eid,)).fetchall():
+            try: sel = json.loads(sj or "{}")
+            except Exception: sel = {}
+            if not sel.get("equipment"):
+                sel["equipment"] = "Kettlebell"
+                db.execute("UPDATE results SET selectors=? WHERE id=?", (json.dumps(sel), rid))
+    bp = next(x for x in src["exercises"] if x["name"] == "Bench Press Strength")
+    for eid, dj in db.execute("SELECT id,def FROM exercises WHERE name='Bench Press Strength'").fetchall():
+        bd = json.loads(dj)
+        if not bd.get("secondary"):
+            bd["secondary"] = bp["secondary"]
+            db.execute("UPDATE exercises SET description=?,def=? WHERE id=?", (bp["description"], json.dumps(bd), eid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_saop_v1','1')")
+    db.execute("COMMIT")
+migrate_saop()
+
 # ---------- helpers ----------
 def hp(pin, salt): return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200000).hex()
 def th(t): return hashlib.sha256(t.encode()).hexdigest()

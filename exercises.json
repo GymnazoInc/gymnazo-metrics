@@ -587,7 +587,7 @@
   },
   {
    "name": "Bench Press Strength",
-   "description": "Your best weight for a 1 to 3 rep max.",
+   "description": "Your best weight for a 1 to 3 rep max. Record the weight and how many reps you got.",
    "category": "Strength",
    "primary": {
     "type": "weight",
@@ -595,7 +595,12 @@
     "unit": "lb",
     "better": "higher"
    },
-   "secondary": null,
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
    "selectors": [
     {
      "key": "equipment",
@@ -736,16 +741,21 @@
    "sort": 28
   },
   {
-   "name": "Kettlebell Single Arm Overhead Press",
-   "description": "Kettlebell in the rack position, then push press overhead.",
+   "name": "Single Arm Overhead Press",
+   "description": "Weight in the rack position, then push press overhead. Record the weight, how many reps you got, and which equipment you used.",
    "category": "Strength",
    "primary": {
     "type": "weight",
-    "label": "Kettlebell weight (pounds)",
+    "label": "Weight used (pounds)",
     "unit": "lb",
     "better": "higher"
    },
-   "secondary": null,
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
    "selectors": [
     {
      "key": "hand",
@@ -753,6 +763,17 @@
      "options": [
       "Right Hand",
       "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    },
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "PowerBlock",
+      "Kettlebell",
+      "FitFighter"
      ],
      "required": true,
      "series": true

@@ -89,6 +89,18 @@ try:
     s, j, _ = call("/api/results", {"exercise_id": ex["Back Squat Endurance"]["id"], "primary": 135, "secondary": 20, "selectors": {"equipment": "Barbell"}, "day": "2026-06-01"}, ckA); check("headline=secondary exercise logs", s == 200)
     s, j, _ = call("/api/results", {"exercise_id": ex["Back Squat Endurance"]["id"], "primary": 135, "secondary": 25, "selectors": {"equipment": "Barbell"}, "day": "2026-07-01"}, ckA); check("headline=secondary PB uses reps", j["pb"])
     s, j, _ = call("/api/results", {"exercise_id": ex["Body Weight Plank on Forearms"]["id"], "primary": 90000, "day": "2026-06-01"}, ckA); check("absurd time rejected", s == 400)
+    # Single Arm Overhead Press (renamed from Kettlebell ...): reps + equipment required and stored
+    sa = ex["Single Arm Overhead Press"]["id"]; check("old KB name gone", "Kettlebell Single Arm Overhead Press" not in ex)
+    check("SAOP def: reps + equipment options", ex["Single Arm Overhead Press"]["def"]["secondary"]["type"] == "reps" and ["PowerBlock", "Kettlebell", "FitFighter"] in [x["options"] for x in ex["Single Arm Overhead Press"]["def"]["selectors"]])
+    s, j, _ = call("/api/results", {"exercise_id": sa, "primary": 35, "selectors": {"hand": "Left Hand", "equipment": "PowerBlock"}, "day": "2026-06-02"}, ckA); check("SAOP reps required", s == 400)
+    s, j, _ = call("/api/results", {"exercise_id": sa, "primary": 35, "secondary": 8, "selectors": {"hand": "Left Hand"}, "day": "2026-06-02"}, ckA); check("SAOP equipment required", s == 400)
+    s, j, _ = call("/api/results", {"exercise_id": sa, "primary": 35, "secondary": 8, "selectors": {"hand": "Left Hand", "equipment": "PowerBlock"}, "day": "2026-06-02"}, ckA); check("SAOP log ok", s == 200)
+    s, m, _ = call(f"/api/metric?exercise_id={sa}", cookie=ckA); check("SAOP reps + equipment stored", any(r["s"] == 8 and r["sel"].get("equipment") == "PowerBlock" for r in m["results"]), m)
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Second result,Side / Hand / Foot,Equipment\n2025-01-01,Kettlebell Single Arm Overhead Press,30,6,Right Hand,Kettlebell"}, ckA); check("CSV with old KB name still maps to renamed activity", s == 200 and j["counts"]["ok"] == 1, j)
+    bp = ex["Bench Press Strength"]["id"]
+    s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength reps required", s == 400)
+    s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "secondary": 3, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength log with reps", s == 200)
+    s, m, _ = call(f"/api/metric?exercise_id={bp}", cookie=ckA); check("bench reps stored", any(r["s"] == 3 for r in m["results"]))
     # edit / delete
     s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA); rid = m["results"][0]["id"]
     s, j, _ = call("/api/results/update", {"id": rid, "exercise_id": g, "primary": 85, "selectors": {"hand": "Right Hand"}, "day": "2026-01-10", "note": "<b>hi</b> there"}, ckA); check("edit own result", s == 200)
