@@ -131,6 +131,23 @@ def migrate_sled_desc():
     db.execute("COMMIT")
 migrate_sled_desc()
 
+def migrate_reps_snatch_zercher():
+    """Add required reps to Single Arm Snatch and Zercher Squat (same field as Single Arm Overhead Press).
+    Only fills a missing second measure; existing choices (hand/equipment) are kept. Old entries simply have no reps."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_reps_sasn_zercher_v1'").fetchone(): return
+    src = {x["name"]: x for x in json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))["exercises"]}
+    db.execute("BEGIN")
+    for nm in ("Single Arm Snatch", "Zercher Squat"):
+        e = src[nm]
+        for eid, dj in db.execute("SELECT id,def FROM exercises WHERE name=?", (nm,)).fetchall():
+            d = json.loads(dj)
+            if not d.get("secondary"):
+                d["secondary"] = e["secondary"]
+                db.execute("UPDATE exercises SET description=?,def=? WHERE id=?", (e["description"], json.dumps(d), eid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_reps_sasn_zercher_v1','1')")
+    db.execute("COMMIT")
+migrate_reps_snatch_zercher()
+
 # ---------- helpers ----------
 def hp(pin, salt): return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200000).hex()
 def th(t): return hashlib.sha256(t.encode()).hexdigest()

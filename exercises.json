@@ -566,7 +566,7 @@
   },
   {
    "name": "Zercher Squat",
-   "description": "Barbell from the ground: deadlift, Zercher transition, deep squat, then stand. Or from a rack, squat to 90º.",
+   "description": "Barbell from the ground: deadlift, Zercher transition, deep squat, then stand. Or from a rack, squat to 90º. Record the weight and how many reps you got.",
    "category": "Strength",
    "primary": {
     "type": "weight",
@@ -574,7 +574,12 @@
     "unit": "lb",
     "better": "higher"
    },
-   "secondary": null,
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
    "selectors": [
     {
      "key": "equipment",
@@ -795,7 +800,7 @@
   },
   {
    "name": "Single Arm Snatch",
-   "description": "Snatch from the ground (your choice of static start or swing). Record the weight and which equipment you used.",
+   "description": "Snatch from the ground (your choice of static start or swing). Record the weight, how many reps you got, and which equipment you used.",
    "category": "Strength",
    "primary": {
     "type": "weight",
@@ -803,7 +808,12 @@
     "unit": "lb",
     "better": "higher"
    },
-   "secondary": null,
+   "secondary": {
+    "type": "reps",
+    "label": "How many reps?",
+    "unit": "reps",
+    "optional": false
+   },
    "selectors": [
     {
      "key": "hand",
