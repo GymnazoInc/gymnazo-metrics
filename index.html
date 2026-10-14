@@ -3,7 +3,6 @@
 <meta name="theme-color" content="#d4631c">
 <title>Gymnazo Ability &amp; Capacity Metrics</title>
 <!-- app-marker: gymnazo-metrics-v2 shared-login-v1 search-v1 import-v1 graph-v1 notes-v1 -->
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next LT Pro','Avenir Next','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -22,7 +21,7 @@ h2{font-family:var(--serif);font-weight:600;font-size:26px;margin:0 0 10px}h3{fo
 button{font:inherit;font-weight:700;font-size:20px;border:0;border-radius:16px;padding:14px 18px;min-height:60px;width:100%;cursor:pointer;background:var(--or);color:#fff;transition:transform .15s cubic-bezier(.3,1.8,.5,1);box-shadow:0 3px 0 rgba(0,0,0,.15)}
 button:active{transform:scale(.95)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:4px solid #2b6cb0;outline-offset:2px}
 button.alt{background:#fff;color:var(--or2);border:2px solid var(--or)}button.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}
-button.gold{background:var(--gold);color:var(--navy)}button.danger{background:#fff;color:#b3261e;border:2px solid #b3261e;box-shadow:none}
+button.gold{background:var(--gold);color:var(--ink)}button.danger{background:#fff;color:#b3261e;border:2px solid #b3261e;box-shadow:none}
 button.big{min-height:76px;font-size:24px;border-radius:20px}
 input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date],select,textarea{width:100%;font-size:22px;min-height:60px;padding:10px 14px;border:3px solid #c9c2b8;border-radius:14px;margin:6px 0;font-family:inherit;color:var(--ink);background:#fff}
 textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;margin-top:14px}
@@ -42,18 +41,20 @@ textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;ma
 .msg{font-family:var(--serif);font-size:22px;margin:10px 0}
 .er{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.er .t{flex:1}.er button{width:auto;min-height:56px;padding:6px 16px;font-size:17px}
 .star{color:var(--gold)}
-.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:34px 22px;padding:34px 22px 40px;background:radial-gradient(120% 80% at 50% 0%,#16213a 0%,#0b1222 60%,#070b16 100%);border-radius:6px;border:1px solid #2a3350;box-shadow:inset 0 0 0 6px #0b1222,inset 0 0 0 7px rgba(201,169,106,.35)}
-.lxh{background:#0b1222;color:#e9dcc0;border-radius:6px;border:1px solid #2a3350;text-align:center;padding:30px 18px 24px;margin-bottom:14px}
-.lxh .ey{font:600 12px/1 "Montserrat",system-ui,sans-serif;letter-spacing:.38em;text-transform:uppercase;color:#c9a96a}
-.lxh h2{font:500 34px/1.1 "Cormorant Garamond","Didot","Bodoni 72",Georgia,serif;letter-spacing:.04em;margin:12px 0 8px;color:#f4ead3}
-.lxh .rule{width:120px;height:1px;margin:12px auto;background:linear-gradient(90deg,transparent,#c9a96a,transparent)}
-.lxh p{font:400 15px/1.5 "Montserrat",system-ui,sans-serif;color:#a9a493;margin:0;letter-spacing:.02em}
-.bd{text-align:center;color:#d8cdb4}.bd svg{width:118px;height:118px;display:block;margin:0 auto 14px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
-.bd b{display:block;font:500 19px/1.2 "Cormorant Garamond","Didot",Georgia,serif;letter-spacing:.06em;color:#f1e4c6;margin-bottom:6px}
-.bd .ds{font:400 12.5px/1.5 "Montserrat",system-ui,sans-serif;color:#9d9888;letter-spacing:.02em;max-width:180px;margin:0 auto}
-.bd .dt{font:600 10.5px/1 "Montserrat",system-ui,sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#c9a96a;margin-top:10px}
-.bd:not(.got) b{color:#7f7a6c}.bd:not(.got) .ds{color:#6b6858}.bd:not(.got) svg{filter:none;opacity:.55}
-#toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:var(--navy);color:#fff;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+/* Badges: Gymnazo brand guide (Avenir Next, Charcoal #58585b, logo rules) + palette sampled from new-facility photos (birch, oak, walnut, copper, sage, cladding); orange only as a hairline accent */
+:root{--stone:#f5efe7;--birch:#c7a894;--oak:#b9966c;--walnut:#9e7058;--copper:#9e7247;--sage:#66716a;--olive:#4f5a3a;--clad:#a8a6a3;--brown:#3a3430;--char:#58585b}
+.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:40px 22px;padding:40px 22px 46px;background:var(--stone);border-radius:4px;border:1px solid #e3dbcd;box-shadow:inset 0 0 0 7px var(--stone),inset 0 0 0 8px var(--birch)}
+.lxh{background:var(--brown);color:#f6f1e8;border-radius:4px;text-align:center;padding:34px 18px 28px;margin-bottom:14px}
+.lxh .ey{font:600 11.5px/1 var(--sans);letter-spacing:.42em;text-transform:uppercase;color:var(--birch)}
+.lxh h2{font:600 26px/1.15 var(--sans);letter-spacing:.32em;text-transform:uppercase;margin:16px 0 8px;color:#fff;padding-left:.32em}
+.lxh .rule{width:36px;height:1px;margin:16px auto;background:#d4631c}
+.lxh p{font:200 italic 16px/1.5 var(--sans);color:#e6dccb;margin:0;letter-spacing:.02em}
+.bd{text-align:center}.bd svg{width:118px;height:118px;display:block;margin:0 auto 18px;filter:drop-shadow(0 8px 14px rgba(74,64,56,.2))}
+.bd b{display:block;font:600 14.5px/1.3 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--brown);margin-bottom:7px}
+.bd .ds{font:400 13px/1.5 var(--sans);color:#6f665c;max-width:180px;margin:0 auto}
+.bd .dt{font:500 10.5px/1 var(--sans);letter-spacing:.28em;text-transform:uppercase;color:var(--sage);margin-top:11px}
+.bd:not(.got) b{color:#a8a6a3}.bd:not(.got) .ds{color:#b8b6b2}.bd:not(.got) svg{filter:none}
+#toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:#3a3430;color:#fff;border-bottom:2px solid #66716a;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #toast.show{display:block;animation:drop .4s cubic-bezier(.3,1.6,.5,1)}@keyframes drop{from{transform:translateY(-70px);opacity:0}}
 #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
 .gs{position:fixed;top:0;left:0;right:0;z-index:30;background:#fff;border-bottom:3px solid var(--or);padding:8px 10px;height:72px}.gs input{max-width:640px;display:block;margin:0 auto;min-height:56px;font-size:20px;border-color:var(--or)}
@@ -319,21 +320,21 @@ const GLY={seed:'M12 20V11M12 11c0-4 3-6 6-6 0 4-3 6-6 6zM12 13c0-3-2.5-5-5.5-5 
 const BG={first_result:'seed',first_pb:'star',results3:'n3',results5:'n5',results10:'n10',track5:'comp',track10:'star',months3:'cal',months6:'peak',months12:'cup',streak3:'flame',improve10:'up',improve25:'rkt',
  combo_iron_grip:'grip',combo_row_boat:'oar',combo_miles:'road',combo_gravity:'orb',combo_spring:'sprg',combo_big_three:'bar',combo_flow:'wave',combo_unshakeable:'lotus',combo_energizer:'batt',combo_power_surge:'bolt'};
 const ROMAN={n3:'III',n5:'V',n10:'X'};
-function medal(b,got){const id='m'+b.code,k=BG[b.code]||'star',beads=[...Array(36)].map((_,i)=>{const a=i*10*Math.PI/180;return `<circle cx="${(60+41*Math.cos(a)).toFixed(2)}" cy="${(60+41*Math.sin(a)).toFixed(2)}" r=".9"/>`}).join('');
- const gold=got?`url(#${id}g)`:'#5c5a52',inner=got?`url(#${id}f)`:'#141a2b';
- const emb=ROMAN[k]?`<text x="60" y="69" text-anchor="middle" font-family="Cormorant Garamond,Didot,Georgia,serif" font-size="30" font-weight="600" letter-spacing="2" fill="${gold}">${ROMAN[k]}</text>`
-  :`<g transform="translate(42 42) scale(1.5)" fill="none" stroke="${gold}" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="${GLY[k]}"/></g>`;
+function medal(b,got){const id='m'+b.code,k=BG[b.code]||'star',beads=[...Array(40)].map((_,i)=>{const a=i*9*Math.PI/180;return `<circle cx="${(60+42*Math.cos(a)).toFixed(2)}" cy="${(60+42*Math.sin(a)).toFixed(2)}" r=".85"/>`}).join('');
+ // earned: brushed-copper rim (facility pendant #9e7247), sage enamel ring (tile #66716a), walnut emblem on ivory; locked: cladding-grey line work
+ const rim=got?`url(#${id}s)`:'#d9d6d1',line=got?'#b9966c':'#e2ded8',emb=got?'#5a4033':'#bdbab5',enamel=got?'#66716a':'#ebe8e3';
+ const mark=ROMAN[k]?`<text x="60" y="69" text-anchor="middle" font-family="Avenir Next LT Pro,Avenir Next,Outfit,sans-serif" font-size="25" font-weight="600" letter-spacing="3" fill="${emb}">${ROMAN[k]}</text>`
+  :`<g transform="translate(42 42) scale(1.5)" fill="none" stroke="${emb}" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><path d="${GLY[k]}"/></g>`;
  return `<svg viewBox="0 0 120 120" role="img" aria-label="${esc(b.title)}"><defs>
- <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e7b8"/><stop offset=".35" stop-color="#c9a24f"/><stop offset=".55" stop-color="#fff1c4"/><stop offset=".8" stop-color="#a77d34"/><stop offset="1" stop-color="#e8cf8e"/></linearGradient>
- <radialGradient id="${id}f" cx=".5" cy=".38" r=".7"><stop offset="0" stop-color="#1f2b4a"/><stop offset="1" stop-color="#0a1020"/></radialGradient></defs>
- <circle cx="60" cy="60" r="57" fill="#0a0f1d"/><circle cx="60" cy="60" r="56" fill="none" stroke="${gold}" stroke-width="2.2"/>
- <circle cx="60" cy="60" r="51" fill="${inner}" stroke="${gold}" stroke-width=".6"/>
- <g fill="${gold}" opacity="${got?.9:.6}">${beads}</g><circle cx="60" cy="60" r="37" fill="none" stroke="${gold}" stroke-width=".5"/>
- ${got?'<path d="M24 46a40 40 0 0172 0" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="10"/>':''}
- ${emb}${got?'':`<g transform="translate(53 82)" fill="none" stroke="#7d7a6e" stroke-width=".9"><rect x="1" y="5" width="12" height="9" rx="1"/><path d="M4 5V3a3 3 0 016 0v2"/></g>`}</svg>`}
+ <linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecd5b4"/><stop offset=".3" stop-color="#9e7247"/><stop offset=".52" stop-color="#f6e6cc"/><stop offset=".78" stop-color="#6b4a2e"/><stop offset="1" stop-color="#c7a894"/></linearGradient></defs>
+ <circle cx="60" cy="60" r="57" fill="${rim}"/><circle cx="60" cy="60" r="53.5" fill="#fbf8f3"/>
+ <circle cx="60" cy="60" r="52" fill="none" stroke="${enamel}" stroke-width="2.4"/>
+ <circle cx="60" cy="60" r="49.5" fill="#fbf8f3" stroke="${line}" stroke-width=".6"/>
+ <g fill="${line}">${beads}</g><circle cx="60" cy="60" r="37" fill="none" stroke="${line}" stroke-width=".5"/>
+ ${mark}${got?'':`<g transform="translate(53 83)" fill="none" stroke="#a8a6a3" stroke-width=".9"><rect x="1" y="5" width="12" height="9" rx="1"/><path d="M4 5V3a3 3 0 016 0v2"/></g>`}</svg>`}
 function badgeTile(b,got){return `<div class="bd ${got?'got':''}">${medal(b,got)}<b>${esc(b.title)}</b><div class="ds">${esc(b.desc)}</div>${got&&b.at?'<div class="dt">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`}
 async function drawBadges(){$('t-badges').innerHTML='<div class="card">Loading…</div>';const {j}=await api('/api/badges');const B=j.badges||[],n=B.filter(b=>b.earned).length;
- $('t-badges').innerHTML=`<div class="lxh"><div class="ey">Gymnazo · Private Collection</div><h2>My Distinctions</h2><div class="rule"></div><p>${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>badgeTile(b,b.earned)).join('')}</div>`}
+ $('t-badges').innerHTML=`<div class="lxh"><div class="ey">Gymnazo</div><h2>Badges</h2><div class="rule"></div><p>${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>badgeTile(b,b.earned)).join('')}</div>`}
 function drawMe(){$('t-me').innerHTML=`<div class="card"><h2>${esc(ME.name)}</h2><p class="small">Your results are private. No one else can see them, and there are no leaderboards.</p><button id="lo" class="alt">Log out</button></div><div class="card"><h3>My results file</h3><p class="small">Bring in past results, or save a copy of all your results (with your notes) as a spreadsheet file.</p><button id="mi" class="big">⬆ Import my past results</button><a class="btn alt" href="/api/export.csv" download style="margin-top:10px">⬇ Download my results (CSV)</a></div><div class="card"><h3>Delete my account and data</h3><p class="small">This removes your account, your results and your badges here for good. Your login still works on the other Gymnazo app.</p><button class="danger" id="da">Delete my account and data</button><div id="dc" class="hide"><label class="l" for="dp">Type your 4-digit PIN to confirm</label><input id="dp" type="tel" inputmode="numeric" maxlength="4" style="-webkit-text-security:disc"><div class="err" id="de" role="alert"></div><button class="danger" id="dy2">Yes, delete everything</button><button class="ghost" id="dn" style="margin-top:8px">No, keep my account</button></div></div>`;
  $('lo').onclick=logout;$('mi').onclick=openImport;$('da').onclick=()=>{$('dc').classList.remove('hide');$('da').classList.add('hide');$('dp').focus()};$('dn').onclick=()=>{$('dc').classList.add('hide');$('da').classList.remove('hide')};
  $('dy2').onclick=async()=>{const {ok,j}=await api('/api/account/delete',{pin:$('dp').value});if(!ok){$('de').textContent=j.error||'Something went wrong.';return}ME=null;appOff();closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick();toast('Your account and data were deleted.')}}
