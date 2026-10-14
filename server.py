@@ -247,7 +247,30 @@ BADGES = [
     ("streak3", "Three months in a row", "You logged results 3 months in a row.", "🔥"),
     ("improve10", "10% better", "You improved a metric by 10% since your first result.", "📈"),
     ("improve25", "25% better", "You improved a metric by 25% since your first result.", "🚀"),
+    ("combo_iron_grip", "Iron Grip", "You logged Grip Strength, Overhead Hang and Pull-ups.", "✊"),
+    ("combo_row_boat", "Row Row Row Your Boat", "You logged the 500m, 1000m and 2000m rows.", "🚣"),
+    ("combo_miles", "Miles on Miles", "You logged the Gymnazo Loop, Gymnazo Mile, Shuttle Run and Sled Push.", "🏃"),
+    ("combo_gravity", "Gravity Defier", "You logged Pull-ups, Squats in 1 minute, Push-ups and Plank.", "🪐"),
+    ("combo_spring", "Spring Loaded", "You logged Box Jump, Anterior Jump, Anterior Triple Jump and Single Leg Hop.", "🦘"),
+    ("combo_big_three", "Big Three", "You logged Bench Press Strength, Back Squat Strength and Deadlift.", "🏋️"),
+    ("combo_flow", "Flow State", "You logged Rope Flow Dragons, Dragon Switches and Mace 360s.", "🌀"),
+    ("combo_unshakeable", "Unshakeable", "You logged Single Leg Balance, Turkish Get-up and Plank.", "🧘"),
+    ("combo_energizer", "Energizer", "You logged the 1-minute Overhead Press and Snatch, plus Bench Press and Back Squat Endurance.", "🔋"),
+    ("combo_power_surge", "Power Surge", "You logged the Keiser Rotation Swing, Sled Push and Box Jump.", "⚡"),
 ]
+# Themed badges: earned by logging at least one result in every listed activity (exact names in the exercises table).
+COMBO_BADGES = {
+    "combo_iron_grip": ("Grip Strength", "Bilateral Hand / Unilateral Hand Overhead Hang", "Pull-ups"),
+    "combo_row_boat": ("Row Machine - 500m Row", "Row Machine - 1000m Row", "Row Machine - 2000m Row"),
+    "combo_miles": ("Gymnazo Loop", "Gymnazo Mile", "Shuttle Run Line Touch (5-10-15 Yard Sprint)", "Sled Push"),
+    "combo_gravity": ("Pull-ups", "Body Weight Squat in 1 minute", "Body Weight Push-ups to fatigue", "Body Weight Plank on Forearms"),
+    "combo_spring": ("Box Jump", "Anterior Jump", "Anterior Triple Jump", "Single Leg Hop"),
+    "combo_big_three": ("Bench Press Strength", "Back Squat Strength", "Deadlift"),
+    "combo_flow": ("Rope Flow Dragons in 1 minute", "Rope Flow Dragon Switches in 1 minute", "Mace 360s"),
+    "combo_unshakeable": ("Single Leg Balance", "Kettlebell Turkish Get-up", "Body Weight Plank on Forearms"),
+    "combo_energizer": ("Overhead Press (in 1 minute)", "Snatch (in 1 minute)", "Bench Press Endurance", "Back Squat Endurance"),
+    "combo_power_surge": ("Keiser Max Power Rotation Swing", "Sled Push", "Box Jump"),
+}
 BADGE_MAP = {b[0]: b for b in BADGES}
 def badge_obj(code): b = BADGE_MAP[code]; return {"code": b[0], "title": b[1], "desc": b[2], "icon": b[3]}
 
@@ -285,6 +308,9 @@ def evaluate_badges(uid):
                 pct = (b - f) / abs(f) if better == "higher" else (f - b) / abs(f)
                 if pct >= 0.10: earned.add("improve10")
                 if pct >= 0.25: earned.add("improve25")
+    logged = {r[0] for r in db.execute("SELECT DISTINCT e.name FROM results r JOIN exercises e ON e.id=r.exercise_id WHERE r.user_id=?", (uid,))}
+    for code, names in COMBO_BADGES.items():
+        if all(n in logged for n in names): earned.add(code)
     new = [c for c, *_ in BADGES if c in earned and c not in have]
     now = time.time()
     for c in new: db.execute("INSERT OR IGNORE INTO badges VALUES(?,?,?)", (uid, c, now))

@@ -133,6 +133,26 @@ try:
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength reps required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "secondary": 3, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength log with reps", s == 200)
     s, m, _ = call(f"/api/metric?exercise_id={bp}", cookie=ckA); check("bench reps stored", any(r["s"] == 3 for r in m["results"]))
+    # themed combo badges: every listed name exists, and a badge fires only when all its activities have a result
+    import importlib.util; spec = importlib.util.spec_from_file_location("srvdefs", os.path.join(ROOT, "server.py"))
+    src = open(os.path.join(ROOT, "server.py"), encoding="utf-8").read()
+    combos = eval(src[src.index("COMBO_BADGES = ") + len("COMBO_BADGES = "):src.index("}", src.index("COMBO_BADGES = ")) + 1])
+    check("10 combo badges, no single-arm badge yet", len(combos) == 10 and not any("Single Arm" in n for v in combos.values() for n in v))
+    check("every combo activity name exists", all(n in ex for v in combos.values() for n in v), [n for v in combos.values() for n in v if n not in ex])
+    s, j, ckZ = call("/api/register", {"name": "Zed", "pin": "5555"})
+    bg = lambda: {b["code"] for b in call("/api/badges", cookie=ckZ)[1]["badges"] if b["earned"]}
+    rows = [("Bench Press Strength", 135, 3, {"equipment": "Barbell"}), ("Back Squat Strength", 185, 2, {"equipment": "Barbell"})]
+    for n, p, sv, sel in rows: call("/api/results", {"exercise_id": ex[n]["id"], "primary": p, "secondary": sv, "selectors": sel, "day": "2026-06-01"}, ckZ)
+    check("Big Three not earned with 2 of 3", "combo_big_three" not in bg())
+    s, j, _ = call("/api/results", {"exercise_id": ex["Deadlift"]["id"], "primary": 225, "selectors": {k["key"]: k["options"][0] for k in ex["Deadlift"]["def"]["selectors"]}, "secondary": 3 if ex["Deadlift"]["def"]["secondary"] else None, "day": "2026-06-01"}, ckZ)
+    check("Big Three earned on 3rd activity (new-badge popup)", s == 200 and "combo_big_three" in [b["code"] for b in j["newBadges"]], j)
+    for n, p in (("Row Machine - 500m Row", 120), ("Row Machine - 1000m Row", 250)):
+        call("/api/results", {"exercise_id": ex[n]["id"], "primary": p, "selectors": {"damper": "5"}, "day": "2026-06-01"}, ckZ)
+    check("Row badge needs all 3 rows", "combo_row_boat" not in bg())
+    s, j, _ = call("/api/results", {"exercise_id": ex["Row Machine - 2000m Row"]["id"], "primary": 540, "selectors": {"damper": "5"}, "day": "2026-06-01"}, ckZ)
+    check("Row badge earned", s == 200 and "combo_row_boat" in bg(), j)
+    check("badge list shows all combo badges", {"combo_" + k.split("combo_")[1] for k in combos} <= {b["code"] for b in call("/api/badges", cookie=ckZ)[1]["badges"]})
+    call("/api/account/delete", {"pin": "5555"}, ckZ)
     # edit / delete
     s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA); rid = m["results"][0]["id"]
     s, j, _ = call("/api/results/update", {"id": rid, "exercise_id": g, "primary": 85, "selectors": {"hand": "Right Hand"}, "day": "2026-01-10", "note": "<b>hi</b> there"}, ckA); check("edit own result", s == 200)
@@ -158,7 +178,7 @@ try:
     check("most badges so far", {"first_result", "first_pb", "results3", "results5", "results10", "track5", "track10", "months6", "streak3", "improve10", "improve25"} <= got, got)
     log(mile, 500, "2025-12-01"); log(mile, 500, "2025-11-01"); log(mile, 500, "2025-10-01")
     s, bd, _ = call("/api/badges", cookie=ckA); got = {b["code"] for b in bd["badges"] if b["earned"]}
-    check("all 13 badges earned", got == want, want - got)
+    check("all 13 progress badges earned", want <= got, want - got)
     cnt = {c: allnew.count(c) for c in set(allnew)}
     check("every badge fires once only (new-badge lists)", all(v == 1 for v in cnt.values()), cnt)
     rows = sqlite3.connect(DBP).execute("select user_id,code,count(*) from badges group by 1,2 having count(*)>1").fetchall(); check("no duplicate badge rows", not rows)
