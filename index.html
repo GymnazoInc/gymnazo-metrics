@@ -3,6 +3,7 @@
 <meta name="theme-color" content="#d4631c">
 <title>Gymnazo Ability &amp; Capacity Metrics</title>
 <!-- app-marker: gymnazo-metrics-v2 shared-login-v1 search-v1 import-v1 graph-v1 notes-v1 -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next LT Pro','Avenir Next','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -41,7 +42,17 @@ textarea{font-size:19px;min-height:84px}label.l{display:block;font-weight:700;ma
 .msg{font-family:var(--serif);font-size:22px;margin:10px 0}
 .er{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.er .t{flex:1}.er button{width:auto;min-height:56px;padding:6px 16px;font-size:17px}
 .star{color:var(--gold)}
-.bg{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bd{border-radius:18px;padding:14px 8px;text-align:center;border:2px dashed #cbc4ba;background:#fff;font-size:16px}.bd .ic{font-size:44px;display:block;filter:grayscale(1) opacity(.4)}.bd.got{border:2px solid var(--gold);background:linear-gradient(#fff8e6,#fbe6b3);font-weight:700}.bd.got .ic{filter:none}.bd b{display:block;font-size:19px}
+.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:34px 22px;padding:34px 22px 40px;background:radial-gradient(120% 80% at 50% 0%,#16213a 0%,#0b1222 60%,#070b16 100%);border-radius:6px;border:1px solid #2a3350;box-shadow:inset 0 0 0 6px #0b1222,inset 0 0 0 7px rgba(201,169,106,.35)}
+.lxh{background:#0b1222;color:#e9dcc0;border-radius:6px;border:1px solid #2a3350;text-align:center;padding:30px 18px 24px;margin-bottom:14px}
+.lxh .ey{font:600 12px/1 "Montserrat",system-ui,sans-serif;letter-spacing:.38em;text-transform:uppercase;color:#c9a96a}
+.lxh h2{font:500 34px/1.1 "Cormorant Garamond","Didot","Bodoni 72",Georgia,serif;letter-spacing:.04em;margin:12px 0 8px;color:#f4ead3}
+.lxh .rule{width:120px;height:1px;margin:12px auto;background:linear-gradient(90deg,transparent,#c9a96a,transparent)}
+.lxh p{font:400 15px/1.5 "Montserrat",system-ui,sans-serif;color:#a9a493;margin:0;letter-spacing:.02em}
+.bd{text-align:center;color:#d8cdb4}.bd svg{width:118px;height:118px;display:block;margin:0 auto 14px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
+.bd b{display:block;font:500 19px/1.2 "Cormorant Garamond","Didot",Georgia,serif;letter-spacing:.06em;color:#f1e4c6;margin-bottom:6px}
+.bd .ds{font:400 12.5px/1.5 "Montserrat",system-ui,sans-serif;color:#9d9888;letter-spacing:.02em;max-width:180px;margin:0 auto}
+.bd .dt{font:600 10.5px/1 "Montserrat",system-ui,sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#c9a96a;margin-top:10px}
+.bd:not(.got) b{color:#7f7a6c}.bd:not(.got) .ds{color:#6b6858}.bd:not(.got) svg{filter:none;opacity:.55}
 #toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:0 auto;background:var(--navy);color:#fff;padding:18px;border-radius:18px;font-weight:700;text-align:center;z-index:40;display:none;font-size:21px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #toast.show{display:block;animation:drop .4s cubic-bezier(.3,1.6,.5,1)}@keyframes drop{from{transform:translateY(-70px);opacity:0}}
 #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
@@ -294,11 +305,35 @@ function drawImportPreview(){const R=IMP.res,rows=R.rows,ok=rows.filter(r=>r.sta
  $('ov').querySelectorAll('[data-fx]').forEach(s=>s.onchange=()=>{if(s.value){IMP.fixes[s.dataset.fx]=+s.value;previewImport()}});
  $('ic').onclick=async()=>{if(!ok.length)return;$('ic').disabled=true;$('ic').textContent='Importing…';const {ok:o,j}=await api('/api/import/confirm',{text:IMP.text,fixes:IMP.fixes});if(!o){toast(j.error||'Something went wrong.');$('ic').disabled=false;return}
   $('ovbar').classList.add('hide');await Promise.all([loadLib(),loadHome()]);importDone(j)}}
-function importDone(j){confetti(160);$('ov').innerHTML=`<div class="in"><div class="card" style="text-align:center"><div style="font-size:56px">🎉</div><h2>All done!</h2><p style="font-size:22px">We imported <b>${j.imported}</b> result${j.imported===1?'':'s'}.</p><p class="small">${j.counts.duplicate?j.counts.duplicate+' already saved were skipped. ':''}${j.counts.problem?j.counts.problem+' rows were skipped because of problems.':''}</p>${j.newBadges.length?`<h3>New badges</h3><div class="bg">${j.newBadges.map(b=>`<div class="bd got"><span class="ic">${b.icon}</span><b>${esc(b.title)}</b>${esc(b.desc)}</div>`).join('')}</div>`:''}<button class="big" id="idn" style="margin-top:16px">See my progress</button></div></div>`;$('idn').onclick=()=>{closeOv();tab('home')}}
+function importDone(j){confetti(160);$('ov').innerHTML=`<div class="in"><div class="card" style="text-align:center"><div style="font-size:56px">🎉</div><h2>All done!</h2><p style="font-size:22px">We imported <b>${j.imported}</b> result${j.imported===1?'':'s'}.</p><p class="small">${j.counts.duplicate?j.counts.duplicate+' already saved were skipped. ':''}${j.counts.problem?j.counts.problem+' rows were skipped because of problems.':''}</p>${j.newBadges.length?`<h3>New badges</h3><div class="bg">${j.newBadges.map(b=>badgeTile(b,true)).join('')}</div>`:''}<button class="big" id="idn" style="margin-top:16px">See my progress</button></div></div>`;$('idn').onclick=()=>{closeOv();tab('home')}}
 
 // ---------- badges / me ----------
+// Luxury medallions: one inline SVG per badge (gold-foil rings, beaded inner ring, thin-line emblem).
+const GLY={seed:'M12 20V11M12 11c0-4 3-6 6-6 0 4-3 6-6 6zM12 13c0-3-2.5-5-5.5-5 0 3 2.5 5 5.5 5z',star:'M12 4l2.2 5 5.3.5-4 3.6 1.2 5.3L12 15.6 7.3 18.4l1.2-5.3-4-3.6 5.3-.5z',
+ n:'',comp:'M12 4v16M4 12h16M12 4l2 8-2 8-2-8z',cal:'M5 7h14v12H5zM5 10h14M9 5v4M15 5v4',peak:'M3 19l6-10 4 6 3-4 5 8z',cup:'M8 4h8v5a4 4 0 01-8 0zM8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M9 20h6',
+ flame:'M12 21c-4 0-6-3-6-6 0-4 4-6 4-10 3 2 5 5 5 8 1-1 1-2 1-3 2 2 2 4 2 5 0 3-2 6-6 6z',up:'M4 18l6-6 4 4 6-8M15 8h5v5',rkt:'M12 3c3 2 4 6 4 10l-4 3-4-3c0-4 1-8 4-10zM8 13l-3 4h4M16 13l3 4h-4M12 9.5v.1',
+ grip:'M7 11V7a1.5 1.5 0 013 0v4M10 10V5.5a1.5 1.5 0 013 0V10M13 10V6.5a1.5 1.5 0 013 0V13c0 4-2 7-5 7s-5-2-6-5l-1-3a1.5 1.5 0 012.6-1.4L7 12',
+ oar:'M3 16c3 2 6 2 9 0s6-2 9 0M6 13L18 5M17 4l3 2-2 1',road:'M9 4L5 20M15 4l4 16M12 6v2M12 11v2M12 16v2',orb:'M12 12m-4 0a4 4 0 108 0 4 4 0 10-8 0M3 13c3-3 15-5 18-2M12 3v2M12 19v2',
+ sprg:'M7 20h10M8 17l8-2-8-2 8-2-8-2 8-2M12 7V3M10 5l2-2 2 2',bar:'M3 12h18M6 8v8M9 9v6M18 8v8M15 9v6',wave:'M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0',lotus:'M12 18c-4 0-7-2-8-5 3 0 6 1 8 5zM12 18c4 0 7-2 8-5-3 0-6 1-8 5zM12 18c-2-3-2-7 0-11 2 4 2 8 0 11z',
+ bolt:'M13 3L6 13h5l-1 8 7-10h-5z',batt:'M5 8h12v8H5zM17 10.5h2v3h-2M8 10v4M11 10v4'};
+const BG={first_result:'seed',first_pb:'star',results3:'n3',results5:'n5',results10:'n10',track5:'comp',track10:'star',months3:'cal',months6:'peak',months12:'cup',streak3:'flame',improve10:'up',improve25:'rkt',
+ combo_iron_grip:'grip',combo_row_boat:'oar',combo_miles:'road',combo_gravity:'orb',combo_spring:'sprg',combo_big_three:'bar',combo_flow:'wave',combo_unshakeable:'lotus',combo_energizer:'batt',combo_power_surge:'bolt'};
+const ROMAN={n3:'III',n5:'V',n10:'X'};
+function medal(b,got){const id='m'+b.code,k=BG[b.code]||'star',beads=[...Array(36)].map((_,i)=>{const a=i*10*Math.PI/180;return `<circle cx="${(60+41*Math.cos(a)).toFixed(2)}" cy="${(60+41*Math.sin(a)).toFixed(2)}" r=".9"/>`}).join('');
+ const gold=got?`url(#${id}g)`:'#5c5a52',inner=got?`url(#${id}f)`:'#141a2b';
+ const emb=ROMAN[k]?`<text x="60" y="69" text-anchor="middle" font-family="Cormorant Garamond,Didot,Georgia,serif" font-size="30" font-weight="600" letter-spacing="2" fill="${gold}">${ROMAN[k]}</text>`
+  :`<g transform="translate(42 42) scale(1.5)" fill="none" stroke="${gold}" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="${GLY[k]}"/></g>`;
+ return `<svg viewBox="0 0 120 120" role="img" aria-label="${esc(b.title)}"><defs>
+ <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e7b8"/><stop offset=".35" stop-color="#c9a24f"/><stop offset=".55" stop-color="#fff1c4"/><stop offset=".8" stop-color="#a77d34"/><stop offset="1" stop-color="#e8cf8e"/></linearGradient>
+ <radialGradient id="${id}f" cx=".5" cy=".38" r=".7"><stop offset="0" stop-color="#1f2b4a"/><stop offset="1" stop-color="#0a1020"/></radialGradient></defs>
+ <circle cx="60" cy="60" r="57" fill="#0a0f1d"/><circle cx="60" cy="60" r="56" fill="none" stroke="${gold}" stroke-width="2.2"/>
+ <circle cx="60" cy="60" r="51" fill="${inner}" stroke="${gold}" stroke-width=".6"/>
+ <g fill="${gold}" opacity="${got?.9:.6}">${beads}</g><circle cx="60" cy="60" r="37" fill="none" stroke="${gold}" stroke-width=".5"/>
+ ${got?'<path d="M24 46a40 40 0 0172 0" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="10"/>':''}
+ ${emb}${got?'':`<g transform="translate(53 82)" fill="none" stroke="#7d7a6e" stroke-width=".9"><rect x="1" y="5" width="12" height="9" rx="1"/><path d="M4 5V3a3 3 0 016 0v2"/></g>`}</svg>`}
+function badgeTile(b,got){return `<div class="bd ${got?'got':''}">${medal(b,got)}<b>${esc(b.title)}</b><div class="ds">${esc(b.desc)}</div>${got&&b.at?'<div class="dt">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`}
 async function drawBadges(){$('t-badges').innerHTML='<div class="card">Loading…</div>';const {j}=await api('/api/badges');const B=j.badges||[],n=B.filter(b=>b.earned).length;
- $('t-badges').innerHTML=`<div class="card"><h2>My Badges 🏅</h2><p class="small" style="margin:0">${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>`<div class="bd ${b.earned?'got':''}"><span class="ic">${b.earned?b.icon:'🔒'}</span><b>${esc(b.title)}</b>${esc(b.desc)}${b.earned?'<div class="small">'+esc(new Date(b.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div>':''}</div>`).join('')}</div>`}
+ $('t-badges').innerHTML=`<div class="lxh"><div class="ey">Gymnazo · Private Collection</div><h2>My Distinctions</h2><div class="rule"></div><p>${n} of ${B.length} earned. Only you can see these.</p></div><div class="bg">${B.map(b=>badgeTile(b,b.earned)).join('')}</div>`}
 function drawMe(){$('t-me').innerHTML=`<div class="card"><h2>${esc(ME.name)}</h2><p class="small">Your results are private. No one else can see them, and there are no leaderboards.</p><button id="lo" class="alt">Log out</button></div><div class="card"><h3>My results file</h3><p class="small">Bring in past results, or save a copy of all your results (with your notes) as a spreadsheet file.</p><button id="mi" class="big">⬆ Import my past results</button><a class="btn alt" href="/api/export.csv" download style="margin-top:10px">⬇ Download my results (CSV)</a></div><div class="card"><h3>Delete my account and data</h3><p class="small">This removes your account, your results and your badges here for good. Your login still works on the other Gymnazo app.</p><button class="danger" id="da">Delete my account and data</button><div id="dc" class="hide"><label class="l" for="dp">Type your 4-digit PIN to confirm</label><input id="dp" type="tel" inputmode="numeric" maxlength="4" style="-webkit-text-security:disc"><div class="err" id="de" role="alert"></div><button class="danger" id="dy2">Yes, delete everything</button><button class="ghost" id="dn" style="margin-top:8px">No, keep my account</button></div></div>`;
  $('lo').onclick=logout;$('mi').onclick=openImport;$('da').onclick=()=>{$('dc').classList.remove('hide');$('da').classList.add('hide');$('dp').focus()};$('dn').onclick=()=>{$('dc').classList.add('hide');$('da').classList.remove('hide')};
  $('dy2').onclick=async()=>{const {ok,j}=await api('/api/account/delete',{pin:$('dp').value});if(!ok){$('de').textContent=j.error||'Something went wrong.';return}ME=null;appOff();closeOv();$('app').classList.add('hide');$('navw').classList.add('hide');$('login').classList.remove('hide');$('back').onclick();toast('Your account and data were deleted.')}}
