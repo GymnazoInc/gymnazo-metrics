@@ -783,12 +783,12 @@
    "sort": 29
   },
   {
-   "name": "Kettlebell Single Arm Snatch",
-   "description": "Kettlebell snatch from the ground (your choice of static start or swing).",
+   "name": "Single Arm Snatch",
+   "description": "Snatch from the ground (your choice of static start or swing). Record the weight and which equipment you used.",
    "category": "Strength",
    "primary": {
     "type": "weight",
-    "label": "Kettlebell weight (pounds)",
+    "label": "Weight used (pounds)",
     "unit": "lb",
     "better": "higher"
    },
@@ -800,6 +800,17 @@
      "options": [
       "Right Hand",
       "Left Hand"
+     ],
+     "required": true,
+     "series": true
+    },
+    {
+     "key": "equipment",
+     "label": "Which equipment did you use?",
+     "options": [
+      "PowerBlock",
+      "Kettlebell",
+      "FitFighter"
      ],
      "required": true,
      "series": true

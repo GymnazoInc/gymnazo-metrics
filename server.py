@@ -69,6 +69,28 @@ def migrate_saop():
     db.execute("COMMIT")
 migrate_saop()
 
+def migrate_sasn():
+    """Rename Kettlebell Single Arm Snatch -> Single Arm Snatch and append the equipment choice (other inputs kept).
+    Results stay linked by exercise_id; existing entries get equipment=Kettlebell only if missing."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_sasn_v1'").fetchone(): return
+    src = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
+    e = next(x for x in src["exercises"] if x["name"] == "Single Arm Snatch")
+    eq = next(x for x in e["selectors"] if x["key"] == "equipment")
+    db.execute("BEGIN")
+    for eid, dj in db.execute("SELECT id,def FROM exercises WHERE name IN ('Kettlebell Single Arm Snatch','Single Arm Snatch')").fetchall():
+        d = json.loads(dj)
+        if not any(x.get("key") == "equipment" for x in d.get("selectors") or []): d.setdefault("selectors", []).append(eq)
+        if d.get("primary", {}).get("label") == "Kettlebell weight (pounds)": d["primary"]["label"] = e["primary"]["label"]
+        db.execute("UPDATE exercises SET name='Single Arm Snatch',description=?,def=? WHERE id=?", (e["description"], json.dumps(d), eid))
+        for rid, sj in db.execute("SELECT id,selectors FROM results WHERE exercise_id=?", (eid,)).fetchall():
+            try: sel = json.loads(sj or "{}")
+            except Exception: sel = {}
+            if not sel.get("equipment"):
+                sel["equipment"] = "Kettlebell"; db.execute("UPDATE results SET selectors=? WHERE id=?", (json.dumps(sel), rid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_sasn_v1','1')")
+    db.execute("COMMIT")
+migrate_sasn()
+
 # ---------- helpers ----------
 def hp(pin, salt): return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200000).hex()
 def th(t): return hashlib.sha256(t.encode()).hexdigest()

@@ -97,6 +97,11 @@ try:
     s, j, _ = call("/api/results", {"exercise_id": sa, "primary": 35, "secondary": 8, "selectors": {"hand": "Left Hand", "equipment": "PowerBlock"}, "day": "2026-06-02"}, ckA); check("SAOP log ok", s == 200)
     s, m, _ = call(f"/api/metric?exercise_id={sa}", cookie=ckA); check("SAOP reps + equipment stored", any(r["s"] == 8 and r["sel"].get("equipment") == "PowerBlock" for r in m["results"]), m)
     s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Second result,Side / Hand / Foot,Equipment\n2025-01-01,Kettlebell Single Arm Overhead Press,30,6,Right Hand,Kettlebell"}, ckA); check("CSV with old KB name still maps to renamed activity", s == 200 and j["counts"]["ok"] == 1, j)
+    sn = ex["Single Arm Snatch"]["id"]; check("old KB snatch name gone", "Kettlebell Single Arm Snatch" not in ex)
+    s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "selectors": {"hand": "Right Hand"}, "day": "2026-06-02"}, ckA); check("snatch equipment required", s == 400)
+    s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "selectors": {"hand": "Right Hand", "equipment": "FitFighter"}, "day": "2026-06-02"}, ckA); check("snatch log ok", s == 200)
+    s, m, _ = call(f"/api/metric?exercise_id={sn}", cookie=ckA); check("snatch equipment stored", any(r["sel"].get("equipment") == "FitFighter" for r in m["results"]))
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Side / Hand / Foot,Equipment\n2025-01-01,Kettlebell Single Arm Snatch,26,Right Hand,Kettlebell"}, ckA); check("CSV with old KB snatch name maps", s == 200 and j["counts"]["ok"] == 1, j)
     bp = ex["Bench Press Strength"]["id"]
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength reps required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "secondary": 3, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength log with reps", s == 200)
