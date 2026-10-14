@@ -592,6 +592,9 @@ class H(http.server.BaseHTTPRequestHandler):
         with LOCK:
             if p in ("/", "/index.html"): return self.static("index.html", "text/html; charset=utf-8")
             if p == "/admin": return self.static("admin.html", "text/html; charset=utf-8")
+            m = re.fullmatch(r"/fonts/(AvenirNext-[A-Za-z]+)\.woff2", p)
+            if m and os.path.isfile(os.path.join(HERE, "fonts", m.group(1) + ".woff2")):
+                return self.send(200, open(os.path.join(HERE, "fonts", m.group(1) + ".woff2"), "rb").read(), "font/woff2")
             if p == "/logo.png": return self.static("logo.png", "image/png")
             if p == "/logo-white.png": return self.static("logo-white.png", "image/png")
             if p == "/favicon.ico": return self.send(204, b"", "image/x-icon")

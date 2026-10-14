@@ -3,8 +3,17 @@
 <meta name="theme-color" content="#d4631c">
 <title>Gymnazo Ability &amp; Capacity Metrics</title>
 <!-- app-marker: gymnazo-metrics-v2 shared-login-v1 search-v1 import-v1 graph-v1 notes-v1 -->
+<link rel="preload" href="/fonts/AvenirNext-Regular.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/AvenirNext-DemiBold.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-:root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next LT Pro','Avenir Next','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
+/* Avenir Next (brand typeface; files supplied by Gymnazo), Latin subset */
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-UltraLight.woff2) format("woff2");font-weight:200;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-UltraLightItalic.woff2) format("woff2");font-weight:200;font-style:italic;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Medium.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-DemiBold.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Avenir Next";src:url(/fonts/AvenirNext-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+:root{--or:#d4631c;--or2:#b4510f;--orl:#fbe9dc;--ink:#2b2d33;--mut:#5b5e68;--bg:#faf8f5;--card:#fff;--line:#e6e1da;--gold:#e3b04b;--ok:#2e7d4f;--warn:#a5530f;--navy:#0f1b3d;--sans:'Avenir Next','Avenir Next LT Pro','Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Fraunces',Georgia,'Times New Roman',serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font-family:var(--sans);font-size:19px;line-height:1.45;color:var(--ink);background:var(--bg)}
 .top{background:var(--or);color:#fff;text-align:center;font-weight:600;padding:8px 12px;font-size:16px}
