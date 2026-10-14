@@ -58,8 +58,8 @@
    "sort": 1
   },
   {
-   "name": "Sled Push 20yd",
-   "description": "Push the sled 10 yards and back. Record the total weight you moved in under 1 minute.",
+   "name": "Sled Push",
+   "description": "Push the sled 10 yards and back. Record the total weight you moved in under 1 minute and the distance you pushed.",
    "category": "Running & Rowing",
    "primary": {
     "type": "weight",
@@ -75,7 +75,13 @@
    },
    "selectors": [],
    "headline": "primary",
-   "sort": 2
+   "sort": 2,
+   "third": {
+    "type": "distance",
+    "label": "Distance (yards)",
+    "unit": "yd",
+    "optional": false
+   }
   },
   {
    "name": "Row Machine - 500m Row",
@@ -331,7 +337,7 @@
   },
   {
    "name": "Gymnazo Loop",
-   "description": "A quarter-mile run.",
+   "description": "A quarter-mile walk or run.",
    "category": "Running & Rowing",
    "primary": {
     "type": "time",
@@ -346,7 +352,7 @@
   },
   {
    "name": "Gymnazo Mile",
-   "description": "A 1 mile run.",
+   "description": "A mile walk or run.",
    "category": "Running & Rowing",
    "primary": {
     "type": "time",

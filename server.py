@@ -29,13 +29,20 @@ def today():
     o = os.environ.get("MX_TEST_TODAY")
     return date.fromisoformat(o) if o else datetime.now(TZ).date()
 
+# ---------- additive columns ----------
+def add_columns():
+    """Nullable third measure (e.g. sled push distance). ADD COLUMN only; existing rows read as NULL."""
+    if "tval" not in [r[1] for r in db.execute("PRAGMA table_info(results)")]:
+        db.execute("ALTER TABLE results ADD COLUMN tval REAL")
+add_columns()
+
 # ---------- seed ----------
 def seed():
     if db.execute("SELECT 1 FROM meta WHERE k='seeded'").fetchone(): return
     if db.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == 0:
         data = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
         for e in data["exercises"]:
-            d = {k: e.get(k) for k in ("primary", "secondary", "selectors", "headline")}
+            d = {k: e.get(k) for k in ("primary", "secondary", "third", "selectors", "headline")}
             db.execute("INSERT INTO exercises(name,description,category,sort,active,def) VALUES(?,?,?,?,1,?)",
                        (e["name"], e["description"], e["category"], e.get("sort", 0), json.dumps(d)))
     db.execute("INSERT OR REPLACE INTO meta VALUES('seeded','1')")
@@ -106,6 +113,24 @@ def migrate_bss_reps():
     db.execute("COMMIT")
 migrate_bss_reps()
 
+def migrate_sled_desc():
+    """Sled Push 20yd -> Sled Push (same id) with a required Distance (yards); existing entries backfilled with 20 yd.
+    Also Gymnazo Loop / Gymnazo Mile description wording."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_sled_desc_v1'").fetchone(): return
+    src = {x["name"]: x for x in json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))["exercises"]}
+    sp = src["Sled Push"]
+    db.execute("BEGIN")
+    for eid, dj in db.execute("SELECT id,def FROM exercises WHERE name IN ('Sled Push 20yd','Sled Push')").fetchall():
+        d = json.loads(dj)
+        if not d.get("third"): d["third"] = sp["third"]
+        db.execute("UPDATE exercises SET name='Sled Push',description=?,def=? WHERE id=?", (sp["description"], json.dumps(d), eid))
+        db.execute("UPDATE results SET tval=20 WHERE exercise_id=? AND tval IS NULL", (eid,))
+    for nm, old in (("Gymnazo Loop", "A quarter-mile run."), ("Gymnazo Mile", "A 1 mile run.")):
+        db.execute("UPDATE exercises SET description=? WHERE name=? AND description=?", (src[nm]["description"], nm, old))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_sled_desc_v1','1')")
+    db.execute("COMMIT")
+migrate_sled_desc()
+
 # ---------- helpers ----------
 def hp(pin, salt): return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200000).hex()
 def th(t): return hashlib.sha256(t.encode()).hexdigest()
@@ -126,6 +151,7 @@ def validate_def(d):
         p = measure(d["primary"])
         s = measure(d["secondary"], True) if d.get("secondary") else None
         if s: s["better"] = d["secondary"].get("better") if d["secondary"].get("better") in ("higher", "lower") else "higher"
+        t = measure(d["third"], True) if d.get("third") else None
         sels = []
         for x in (d.get("selectors") or [])[:4]:
             opts = [clean(o, 30) for o in x.get("options", []) if clean(o, 30)][:12]
@@ -135,7 +161,7 @@ def validate_def(d):
         if len({x["key"] for x in sels}) != len(sels): raise ValueError("Choice keys must be different.")
         h = d.get("headline") if d.get("headline") in ("primary", "secondary") else "primary"
         if h == "secondary" and not s: h = "primary"
-        return {"primary": p, "secondary": s, "selectors": sels, "headline": h}, None
+        return {"primary": p, "secondary": s, "third": t, "selectors": sels, "headline": h}, None
     except ValueError as e: return None, str(e)
     except Exception: return None, "That exercise definition isn't valid."
 
@@ -161,8 +187,8 @@ def beats(better, a, b):  # is a strictly better than b
     return a > b if better == "higher" else a < b
 
 def load_results(uid, eid):
-    rows = db.execute("SELECT id,day,pval,sval,selectors,note,created FROM results WHERE user_id=? AND exercise_id=? ORDER BY day,id", (uid, eid)).fetchall()
-    return [{"id": r[0], "day": r[1], "p": r[2], "s": r[3], "sel": json.loads(r[4] or "{}"), "note": r[5] or "", "created": r[6]} for r in rows]
+    rows = db.execute("SELECT id,day,pval,sval,selectors,note,created,tval FROM results WHERE user_id=? AND exercise_id=? ORDER BY day,id", (uid, eid)).fetchall()
+    return [{"id": r[0], "day": r[1], "p": r[2], "s": r[3], "sel": json.loads(r[4] or "{}"), "note": r[5] or "", "created": r[6], "t": r[7]} for r in rows]
 
 def analyse(d, results):
     """Annotate results (is_pb) and build per-series summaries."""
@@ -275,15 +301,21 @@ def parse_result(d, b):
     if d.get("secondary"):
         s, e = parse_measure(d["secondary"], b.get("secondary"), not d["secondary"].get("optional", True))
         if e: return None, e
+    t = None
+    if d.get("third"):
+        t, e = parse_measure(d["third"], b.get("third"), not d["third"].get("optional", True))
+        if e: return None, e
     try: dy = date.fromisoformat(str(b.get("day") or today().isoformat()))
     except Exception: return None, "Please pick a valid date."
     if dy > today() or dy < date(2000, 1, 1): return None, "Please pick today or an earlier date."
-    return {"p": p, "s": s, "sel": sel, "day": dy.isoformat(), "note": clean(b.get("note"), 500)}, None
+    return {"p": p, "s": s, "t": t, "sel": sel, "day": dy.isoformat(), "note": clean(b.get("note"), 500)}, None
 
 
 # ---------- CSV import / export ----------
 MAX_IMPORT_ROWS = 2000
-IMPORT_COLS = ["Date", "Exercise", "Result", "Second result (optional)", "Side / Hand / Foot", "Equipment", "Damper", "Note"]
+IMPORT_COLS = ["Date", "Exercise", "Result", "Second result (optional)", "Side / Hand / Foot", "Equipment", "Damper", "Note", "Third result"]
+# Old exercise names that need defaults on import (e.g. the 20yd sled push was always 20 yards).
+OLD_NAME_DEFAULTS = {"sledpush20yd": {"t": 20}}
 
 def norm(s): return re.sub(r"[^a-z0-9]", "", str(s).casefold().replace("º", "").replace("&", "and"))
 
@@ -351,6 +383,7 @@ def colkey(h):
     h = norm(h)
     if h.startswith("date") or h == "day" or h == "when": return "date"
     if h in ("exercise", "exercisename", "metric", "name", "test", "movement"): return "ex"
+    if "third" in h or h in ("result3", "distance", "yards"): return "t"
     if "second" in h or "extra" in h or h in ("result2", "secondary"): return "s"
     if h.startswith("result") or h in ("score", "value", "primary", "time", "weight", "reps", "result1"): return "p"
     if "equip" in h: return "equipment"
@@ -370,12 +403,13 @@ def import_template():
     return out.getvalue()
 
 def import_reference():
-    out = io.StringIO(); w = csv.writer(out); w.writerow(["Exercise (copy this name)", "Result is", "Second result is", "Choices to fill in"])
+    out = io.StringIO(); w = csv.writer(out); w.writerow(["Exercise (copy this name)", "Result is", "Second result is", "Choices to fill in", "Third result is"])
     for r in db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE active=1 ORDER BY sort,id"):
         e = ex_row(r); d = e["def"]
         def hint(m): return "time as mm:ss, h:mm:ss or seconds" if m["type"] == "time" else (m["label"] + (" (" + m["unit"] + ")" if m["unit"] else ""))
         w.writerow([e["name"], hint(d["primary"]), (hint(d["secondary"]) + (" (optional)" if d["secondary"].get("optional", True) else "")) if d["secondary"] else "",
-                    "; ".join(x["label"] + ": " + " / ".join(x["options"]) + ("" if x["required"] else " (optional)") for x in d["selectors"])])
+                    "; ".join(x["label"] + ": " + " / ".join(x["options"]) + ("" if x["required"] else " (optional)") for x in d["selectors"]),
+                    (hint(d["third"]) + (" (optional)" if d["third"].get("optional", True) else "")) if d.get("third") else ""])
     return out.getvalue()
 
 def cell_safe(v):
@@ -383,12 +417,12 @@ def cell_safe(v):
 
 def export_csv(uid):
     out = io.StringIO(); w = csv.writer(out); w.writerow(IMPORT_COLS)
-    rows = db.execute("SELECT r.day,e.name,r.pval,r.sval,r.selectors,r.note,e.def FROM results r JOIN exercises e ON e.id=r.exercise_id WHERE r.user_id=? ORDER BY r.day,r.id", (uid,)).fetchall()
-    for day, name, pv, sv, sel, note, dj in rows:
+    rows = db.execute("SELECT r.day,e.name,r.pval,r.sval,r.selectors,r.note,e.def,r.tval FROM results r JOIN exercises e ON e.id=r.exercise_id WHERE r.user_id=? ORDER BY r.day,r.id", (uid,)).fetchall()
+    for day, name, pv, sv, sel, note, dj, tv in rows:
         d = json.loads(dj); sel = json.loads(sel or "{}")
         f = lambda m, v: "" if v is None else (fmt_time(v) if m["type"] == "time" else fmt_num(v))
         side = next((sel[x["key"]] for x in d["selectors"] if x["key"] not in ("equipment", "damper") and x["key"] in sel), "")
-        w.writerow([day, cell_safe(name), f(d["primary"], pv), f(d["secondary"], sv) if d.get("secondary") else "", side, sel.get("equipment", ""), sel.get("damper", ""), cell_safe(note)])
+        w.writerow([day, cell_safe(name), f(d["primary"], pv), f(d["secondary"], sv) if d.get("secondary") else "", side, sel.get("equipment", ""), sel.get("damper", ""), cell_safe(note), f(d["third"], tv) if d.get("third") else ""])
     return out.getvalue()
 
 def parse_import(uid, text):
@@ -397,7 +431,7 @@ def parse_import(uid, text):
     lines = text.splitlines(); first = next((l for l in lines if l.strip()), "")
     delim = max([",", "\t", ";"], key=lambda c: first.count(c))
     rows = list(csv.reader(io.StringIO(text), delimiter=delim))
-    cmap = {"date": 0, "ex": 1, "p": 2, "s": 3, "side": 4, "equipment": 5, "damper": 6, "note": 7}; start = 0
+    cmap = {"date": 0, "ex": 1, "p": 2, "s": 3, "side": 4, "equipment": 5, "damper": 6, "note": 7, "t": 8}; start = 0
     if rows:
         hk = [colkey(h) for h in rows[0]]
         if "date" in hk and "ex" in hk: cmap = {k: i for i, k in enumerate(hk) if k and k not in {}}; cmap = {k: hk.index(k) for k in set(hk) if k}; start = 1
@@ -416,8 +450,8 @@ def run_import(uid, b, confirm):
     exrows = db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE active=1 ORDER BY sort,id").fetchall()
     exs = {r[0]: ex_row(r) for r in exrows}; cands = [(i, e["name"], norm(e["name"])) for i, e in exs.items()]
     existing = set()
-    for eid, day, pv, sv, sel in db.execute("SELECT exercise_id,day,pval,sval,selectors FROM results WHERE user_id=?", (uid,)):
-        existing.add((eid, day, pv, sv, json.dumps(json.loads(sel or "{}"), sort_keys=True)))
+    for eid, day, pv, sv, sel, tv in db.execute("SELECT exercise_id,day,pval,sval,selectors,tval FROM results WHERE user_id=?", (uid,)):
+        existing.add((eid, day, pv, sv, tv, json.dumps(json.loads(sel or "{}"), sort_keys=True)))
     out = []; ok_rows = []; today_d = today()
     for rn, r in pr["data"]:
         g = lambda k: (r[pr["cmap"][k]].strip() if k in pr["cmap"] and pr["cmap"][k] < len(r) else "")
@@ -448,6 +482,13 @@ def run_import(uid, b, confirm):
             s, err = val(d["secondary"], g("s"), False)
             if err: bad(err); continue
         elif d.get("secondary") and not d["secondary"].get("optional", True): bad(f"Please add the second result ({d['secondary']['label']})."); continue
+        t = None
+        if d.get("third"):
+            tcell = g("t") or (fmt_num(OLD_NAME_DEFAULTS.get(norm(g("ex")), {}).get("t")) if OLD_NAME_DEFAULTS.get(norm(g("ex")), {}).get("t") else "")
+            if tcell:
+                t, err = val(d["third"], tcell, False)
+                if err: bad(err); continue
+            elif not d["third"].get("optional", True): bad(f"Please add the third result ({d['third']['label']})."); continue
         sel = {}; err = None
         for x in d["selectors"]:
             raw = g("equipment") if x["key"] == "equipment" else g("damper") if x["key"] == "damper" else g("side")
@@ -460,8 +501,8 @@ def run_import(uid, b, confirm):
         if err: bad(err); continue
         note = g("note")
         if re.match(r"^'[=+\-@]", note): note = note[1:]
-        row.update(p=p, s=s, sel=sel, note=clean(note, 500))
-        key = (eid, row["day"], p, s, json.dumps(sel, sort_keys=True))
+        row.update(p=p, s=s, t=t, sel=sel, note=clean(note, 500))
+        key = (eid, row["day"], p, s, t, json.dumps(sel, sort_keys=True))
         if key in existing: row["status"] = "duplicate"
         else: row["status"] = "ok"; existing.add(key); ok_rows.append(row)
         out.append(row)
@@ -470,7 +511,7 @@ def run_import(uid, b, confirm):
     now = time.time(); db.execute("BEGIN")
     try:
         for x in ok_rows:
-            db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?)", (uid, x["exercise_id"], x["day"], x["p"], x["s"], json.dumps(x["sel"]), x["note"], now))
+            db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,tval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?,?)", (uid, x["exercise_id"], x["day"], x["p"], x["s"], x["t"], json.dumps(x["sel"]), x["note"], now))
             db.execute("INSERT OR IGNORE INTO tracked VALUES(?,?,?)", (uid, x["exercise_id"], now))
         db.execute("COMMIT")
     except Exception:
@@ -552,7 +593,7 @@ class H(http.server.BaseHTTPRequestHandler):
             if res:
                 last = res[-1]; g = sm.get(last["series"]) or next(iter(sm.values()), None)
                 if g:
-                    item["latest"] = {"day": last["day"], "value": g["latest"]["value"], "series": g["label"], "p": last["p"], "s": last["s"], "sel": last["sel"]}
+                    item["latest"] = {"day": last["day"], "value": g["latest"]["value"], "series": g["label"], "p": last["p"], "s": last["s"], "t": last["t"], "sel": last["sel"]}
                     item["best"] = g["best"]["value"]; item["trend"] = g["trend"]
                     item["isBest"] = g["latest"]["id"] == g["best"]["id"] and g["count"] > 1
                     item["spark"] = [r["h"] for r in res if r["series"] == last["series"] and r["h"] is not None][-14:]
@@ -571,7 +612,7 @@ class H(http.server.BaseHTTPRequestHandler):
         res = load_results(usr[0], eid); sm = analyse(ex["def"], res)
         tracked = bool(db.execute("SELECT 1 FROM tracked WHERE user_id=? AND exercise_id=?", (usr[0], eid)).fetchone())
         return self.send(200, {"exercise": {k: ex[k] for k in ("id", "name", "description", "category", "def")}, "tracked": tracked,
-                               "results": [{"id": r["id"], "day": r["day"], "p": r["p"], "s": r["s"], "sel": r["sel"], "note": r["note"], "series": r["series"], "h": r["h"], "isPb": r["is_pb"]} for r in res],
+                               "results": [{"id": r["id"], "day": r["day"], "p": r["p"], "s": r["s"], "t": r["t"], "sel": r["sel"], "note": r["note"], "series": r["series"], "h": r["h"], "isPb": r["is_pb"]} for r in res],
                                "series": list(sm.values()), "better": better_of(ex["def"])})
 
     def badges(self, usr):
@@ -698,8 +739,8 @@ class H(http.server.BaseHTTPRequestHandler):
         if err: return self.send(400, {"error": err})
         if db.execute("SELECT COUNT(*) FROM results WHERE user_id=?", (usr[0],)).fetchone()[0] >= 20000:
             return self.send(400, {"error": "That's a lot of results! Please contact the studio."})
-        cur = db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?)",
-                         (usr[0], eid, r["day"], r["p"], r["s"], json.dumps(r["sel"]), r["note"], time.time()))
+        cur = db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,tval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?,?)",
+                         (usr[0], eid, r["day"], r["p"], r["s"], r["t"], json.dumps(r["sel"]), r["note"], time.time()))
         db.execute("INSERT OR IGNORE INTO tracked VALUES(?,?,?)", (usr[0], eid, time.time()))
         res = load_results(usr[0], eid); analyse(ex["def"], res)
         pb = self._is_best_now(ex, res, cur.lastrowid)
@@ -711,7 +752,7 @@ class H(http.server.BaseHTTPRequestHandler):
         if not row: return self.send(404, {"error": "We couldn't find that result."})
         ex = get_ex(row[0]); r, err = parse_result(ex["def"], b)
         if err: return self.send(400, {"error": err})
-        db.execute("UPDATE results SET day=?,pval=?,sval=?,selectors=?,note=? WHERE id=?", (r["day"], r["p"], r["s"], json.dumps(r["sel"]), r["note"], rid))
+        db.execute("UPDATE results SET day=?,pval=?,sval=?,tval=?,selectors=?,note=? WHERE id=?", (r["day"], r["p"], r["s"], r["t"], json.dumps(r["sel"]), r["note"], rid))
         res = load_results(usr[0], row[0]); analyse(ex["def"], res)
         self.send(200, {"id": rid, "pb": self._is_best_now(ex, res, rid), "newBadges": evaluate_badges(usr[0])})
     def set_note(self, usr, b):
@@ -748,7 +789,11 @@ class H(http.server.BaseHTTPRequestHandler):
             return self.send(200, {"exercises": [ex_row(r) for r in rows]})
         if p == "/api/admin/save":
             name = clean(b.get("name"), 80); desc = clean(b.get("description"), 600); cat = clean(b.get("category"), 40)
-            d, err = validate_def(b.get("def") or {})
+            bd = b.get("def") or {}
+            if b.get("id") and "third" not in bd:
+                old = get_ex(int(b["id"]))
+                if old and old["def"].get("third"): bd = dict(bd, third=old["def"]["third"])
+            d, err = validate_def(bd)
             if not name or not cat: err = err or "Please give a name and a category."
             if err: return self.send(400, {"error": err})
             active = 1 if b.get("active", True) else 0

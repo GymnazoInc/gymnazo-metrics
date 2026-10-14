@@ -106,6 +106,23 @@ try:
     s, j, _ = call("/api/results", {"exercise_id": bq, "primary": 185, "selectors": sels, "day": "2026-06-02"}, ckA); check("back squat strength reps required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": bq, "primary": 185, "secondary": 2, "selectors": sels, "day": "2026-06-02"}, ckA); check("back squat strength log with reps", s == 200)
     s, m, _ = call(f"/api/metric?exercise_id={bq}", cookie=ckA); check("back squat reps stored", any(r["s"] == 2 for r in m["results"]))
+    # Sled Push (renamed from Sled Push 20yd): required third measure Distance (yards)
+    check("old sled name gone", "Sled Push 20yd" not in ex and ex["Sled Push"]["def"]["third"]["label"] == "Distance (yards)" and ex["Sled Push"]["def"]["third"]["optional"] is False)
+    sp = ex["Sled Push"]["id"]
+    s, j, _ = call("/api/results", {"exercise_id": sp, "primary": 180, "day": "2026-06-03"}, ckA); check("sled distance required", s == 400 and "distance" in j["error"], j)
+    s, j, _ = call("/api/results", {"exercise_id": sp, "primary": 180, "third": 30, "day": "2026-06-03"}, ckA); check("sled log with distance, time optional", s == 200)
+    s, j, _ = call("/api/results", {"exercise_id": sp, "primary": 200, "secondary": 45, "third": 20, "day": "2026-06-04"}, ckA); check("sled log with distance + time", s == 200)
+    s, m, _ = call(f"/api/metric?exercise_id={sp}", cookie=ckA); check("sled distance + time stored", sorted((r["t"], r["s"]) for r in m["results"]) == [(20, 45), (30, None)], m["results"])
+    rid_sp = [r["id"] for r in m["results"] if r["t"] == 30][0]
+    s, j, _ = call("/api/results/update", {"id": rid_sp, "primary": 180, "third": 25, "day": "2026-06-03"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={sp}", cookie=ckA); check("sled edit updates distance", any(r["id"] == rid_sp and r["t"] == 25 for r in m["results"]))
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Note\n2025-01-01,Sled Push 20yd,150,old file"}, ckA); check("CSV old sled name maps + defaults 20 yd", s == 200 and j["counts"]["ok"] == 1 and j["rows"][0]["t"] == 20 and j["rows"][0]["exercise"] == "Sled Push", j)
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Third result\n2025-01-01,Sled Push,150,30"}, ckA); check("CSV new sled name with distance column", s == 200 and j["rows"][0]["t"] == 30, j)
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result\n2025-01-01,Sled Push,150"}, ckA); check("CSV new sled name without distance -> problem", s == 200 and j["counts"]["problem"] == 1, j)
+    se = ex["Sled Push"]; dd = {k: v for k, v in se["def"].items() if k != "third"}
+    s, j, _ = call("/api/admin/save", {"id": sp, "name": se["name"], "description": se["description"], "category": se["category"], "def": dd}, admin="testpw")
+    s, al, _ = call("/api/admin/list", {}, admin="testpw"); check("admin save without third keeps distance", s == 200 and [e for e in al["exercises"] if e["id"] == sp][0]["def"].get("third", {}).get("label") == "Distance (yards)")
+    check("loop/mile descriptions", ex["Gymnazo Loop"]["description"] == "A quarter-mile walk or run." and ex["Gymnazo Mile"]["description"] == "A mile walk or run.")
     bp = ex["Bench Press Strength"]["id"]
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength reps required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": bp, "primary": 155, "secondary": 3, "selectors": {"equipment": "Barbell"}, "day": "2026-06-02"}, ckA); check("bench strength log with reps", s == 200)
@@ -163,7 +180,7 @@ try:
     s, j, ckC = call("/api/register", {"name": "Carol", "pin": "1111"}); s, j, ckD = call("/api/register", {"name": "Dave", "pin": "2222"})
     gx = lambda n: ex[n]["id"]
     s, tpl, _ = call("/api/import/template", cookie=ckC); tpl = tpl.decode("utf-8-sig") if isinstance(tpl, bytes) else str(tpl)
-    check("template CSV has the documented columns + example rows", tpl.splitlines()[0] == "Date,Exercise,Result,Second result (optional),Side / Hand / Foot,Equipment,Damper,Note" and "Grip Strength" in tpl and len(tpl.splitlines()) >= 6)
+    check("template CSV has the documented columns + example rows", tpl.splitlines()[0] == "Date,Exercise,Result,Second result (optional),Side / Hand / Foot,Equipment,Damper,Note,Third result" and "Grip Strength" in tpl and len(tpl.splitlines()) >= 6)
     s, ref, _ = call("/api/import/reference", cookie=ckC); check("exercise-name reference lists all names", s == 200 and all(n in ref.decode("utf-8-sig") for n in ex))
     check("import endpoints need login", call("/api/import/template")[0] == 401 and call("/api/import/preview", {"text": "x"})[0] == 401 and call("/api/export.csv")[0] == 401 and call("/api/results/note", {"id": 1})[0] == 401)
     CSVT = "\n".join(["Date,Exercise,Result,Second result (optional),Side / Hand / Foot,Equipment,Damper,Note",
@@ -221,7 +238,7 @@ try:
     check("log form note up to 500", max(len(r["note"]) for r in mp["results"]) == 500)
     s, md, _ = call(f"/api/metric?exercise_id={gx('Grip Strength')}", cookie=ckD); check("Dave sees no notes/results of Carol", md["results"] == [])
     s, ex_csv, _ = call("/api/export.csv", cookie=ckC); ex_csv = ex_csv.decode("utf-8-sig")
-    check("export includes Note column + notes", ex_csv.splitlines()[0].endswith(",Note") and "New note for next time" not in ex_csv and "Feeling stronger" in ex_csv)
+    check("export includes Note column + notes", ex_csv.splitlines()[0].endswith(",Note,Third result") and "New note for next time" not in ex_csv and "Feeling stronger" in ex_csv)
     s, dx, _ = call("/api/export.csv", cookie=ckD); check("Dave export has only header (privacy)", len(dx.decode("utf-8-sig").strip().splitlines()) == 1)
     s, ri, _ = call("/api/import/preview", {"text": ex_csv}, ckC); check("export re-imports cleanly (all duplicates, no problems)", ri["counts"]["problem"] == 0 and ri["counts"]["ok"] == 0, ri["counts"])
     # tab-separated paste without header

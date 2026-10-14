@@ -12,7 +12,9 @@ for e in old["exercises"]:
 eid = c.execute("SELECT id FROM exercises WHERE name='Kettlebell Single Arm Overhead Press'").fetchone()[0]
 c.execute("INSERT INTO results(user_id,exercise_id,day,pval,selectors,created) VALUES(1,?,'2026-01-01',35,?,0)", (eid, json.dumps({"hand": "Right Hand"})))
 sid = c.execute("SELECT id FROM exercises WHERE name='Kettlebell Single Arm Snatch'").fetchone()[0]
-c.execute("INSERT INTO results(user_id,exercise_id,day,pval,selectors,created) VALUES(1,?,'2026-01-02',26,?,0)", (sid, json.dumps({"hand": "Left Hand"}))); c.commit(); c.close()
+c.execute("INSERT INTO results(user_id,exercise_id,day,pval,selectors,created) VALUES(1,?,'2026-01-02',26,?,0)", (sid, json.dumps({"hand": "Left Hand"})))
+spid = c.execute("SELECT id FROM exercises WHERE name='Sled Push 20yd'").fetchone()[0]
+c.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,selectors,created) VALUES(1,?,'2026-01-03',150,40,'{}',0)", (spid,)); c.commit(); c.close()
 code = "import sys; sys.argv=['x']; import server"
 env = dict(os.environ, DB_PATH=DBP, ADMIN_PASSWORD="x", PORT="18099", HOST="127.0.0.1")
 for _ in range(2):  # run twice: idempotent
@@ -34,5 +36,9 @@ bd = json.loads(c.execute("SELECT def FROM exercises WHERE name='Bench Press Str
 check("bench strength reps added, equipment kept", bd["secondary"]["type"] == "reps" and bd["selectors"][0]["key"] == "equipment")
 sq = json.loads(c.execute("SELECT def FROM exercises WHERE name='Back Squat Strength'").fetchone()[0])
 check("back squat strength reps added", sq["secondary"]["type"] == "reps" and sq["secondary"]["optional"] is False)
+sp = c.execute("SELECT name,def FROM exercises WHERE id=?", (spid,)).fetchone()
+check("sled renamed in place + required distance", sp[0] == "Sled Push" and json.loads(sp[1])["third"] == {"type": "distance", "label": "Distance (yards)", "unit": "yd", "optional": False})
+check("sled old entry backfilled 20 yd, weight/time kept", c.execute("SELECT pval,sval,tval FROM results WHERE exercise_id=?", (spid,)).fetchone() == (150, 40, 20))
+check("loop + mile descriptions", [r[0] for r in c.execute("SELECT description FROM exercises WHERE name IN ('Gymnazo Loop','Gymnazo Mile') ORDER BY name")] == ["A quarter-mile walk or run.", "A mile walk or run."])
 check("exercise count unchanged", c.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == len(old["exercises"]))
 sys.exit(1 if F else 0)
