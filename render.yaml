@@ -11,6 +11,8 @@ services:
         value: /var/data/metrics.db
       - key: ADMIN_PASSWORD
         sync: false   # set in the Render dashboard; never commit it
+      - key: MOMENTUM_API_SECRET
+        sync: false   # shared with the momentum service (METRICS_API_SECRET there); enables /api/partner/*
     disk:
       name: data
       mountPath: /var/data

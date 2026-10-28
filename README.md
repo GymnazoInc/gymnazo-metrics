@@ -56,3 +56,13 @@ The Winter Solstice tracker and the Ability & Capacity Metrics app share name + 
 - **Register:** the peer is asked whether the name exists; if so the member is told it is taken (log in with the same PIN, or pick a slightly different name). If the peer is unreachable, sign-up pauses with a friendly message (fails closed so two different people cannot end up sharing a name with different PINs). Logging in locally always keeps working.
 - **PIN reset:** an admin reset is pushed to the peer (`/api/federation/set-pin`, existing accounts only, newer timestamps only) from a persistent outbox that is retried every 30 seconds until the peer answers, and as a fallback the newer `pin_changed` is pulled lazily at the next login.
 - Tests: `python3 tests/test_federation.py` runs both apps against each other (set `SOLSTICE_DIR` / `METRICS_DIR` if the repos are not siblings).
+
+## Momentum partner API (Fitness tests inside Gymnazo Momentum)
+Server-to-server only, for the Momentum member app. All `POST /api/partner/*`, header `X-Partner-Secret` = env `MOMENTUM_API_SECRET`
+(>= 24 chars; unset = API disabled, every call 401). Bad secrets lock out the calling IP for 5 minutes after 8 tries.
+- `verify {name,pin}` -> `{ok,user_id,name}`: the same check and 5-try lockout as logging in here (incl. Solstice federation).
+- `register {name,pin}` -> creates a Metrics account exactly like `/api/register` (no session/cookie is issued).
+- `summary {user_id}`, `metric {user_id,exercise_id}`: read-only, same data as `/api/home`, `/api/exercises`, `/api/metric`.
+- `results {user_id,exercise_id,...}`: logs through the same `add_result()` validation members use here.
+- `health`: reports the one-time startup DB snapshot (`backups/metrics.db.pre-momentum-link.bak` next to the DB).
+Member login, sessions and write paths on this site are unchanged. Tests: `python3 tests/test_partner.py`.

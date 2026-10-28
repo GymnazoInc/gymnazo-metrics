@@ -11,9 +11,25 @@ PORT = int(os.environ.get("PORT", 8090))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 TYPES = ("time", "weight", "reps", "distance", "height", "power", "number")
 LOCK = threading.RLock()
+PARTNER_SECRET = os.environ.get("MOMENTUM_API_SECRET", "")
+PARTNER_BAD = {}  # ip -> (bad tries, locked until)
 
 db = sqlite3.connect(DB, check_same_thread=False, isolation_level=None)
 db.execute("PRAGMA journal_mode=WAL")
+
+def snapshot(conn, path, tag):
+    """One-time consistent copy of the live DB (sqlite backup API) next to it, before a release's migrations run.
+    Never overwrites; skipped if the disk is short on space. Returns the backup path or None."""
+    try:
+        bdir = os.path.join(os.path.dirname(os.path.abspath(path)), "backups"); os.makedirs(bdir, exist_ok=True)
+        out = os.path.join(bdir, os.path.basename(path) + "." + tag + ".bak")
+        if os.path.exists(out): return out
+        st = os.statvfs(bdir)
+        if st.f_bavail * st.f_frsize < 3 * os.path.getsize(path) + 20_000_000: return None
+        dst = sqlite3.connect(out + ".tmp"); conn.backup(dst); dst.close(); os.replace(out + ".tmp", out)
+        return out
+    except Exception: return None
+BACKUP = snapshot(db, DB, "pre-momentum-link") if os.path.getsize(DB) > 0 else None
 db.executescript("""
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT, name_key TEXT UNIQUE, salt TEXT, pin_hash TEXT, created REAL, fails INTEGER DEFAULT 0, locked_until REAL DEFAULT 0, picks_saved INTEGER DEFAULT 0, hide_nudge_until REAL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY, user_id INTEGER, created REAL);
@@ -673,6 +689,7 @@ class H(http.server.BaseHTTPRequestHandler):
         p = urlparse(self.path).path; b = self.body()
         # shared-login federation + login/register take the lock themselves (they may call the peer app, never while holding it)
         if p.startswith("/api/federation/"): return FED.handle(self, p, b)
+        if p.startswith("/api/partner/"): return self.partner(p, b)
         if p == "/api/login": return self.login(b)
         if p == "/api/register": return self.register(b)
         with LOCK:
@@ -723,19 +740,67 @@ class H(http.server.BaseHTTPRequestHandler):
     def register(self, b):
         p = self._parse(b)
         if not p: return
-        name, pin = p
+        code, res = self.create_account(*p)
+        if code != 200: return self.send(code, res)
+        self._session(res, True)
+    def create_account(self, name, pin):
+        """Shared by /api/register and the Momentum partner API. Returns (200, user_id) or (status, error payload)."""
         taken = {"error": "That name is already taken. If that's you, tap \"Log in\" and use the same PIN you picked before (it works on both Gymnazo apps). If not, please pick a slightly different name (like adding your last initial)."}
         with LOCK:
-            if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone(): return self.send(409, taken)
+            if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone(): return 409, taken
         c = FED.register_check(name)
-        if c[0] == "taken": return self.send(409, taken)
-        if c[0] == "peer_down": return self.send(503, {"error": "We can't finish creating your account right now. Please try again in a few minutes."})
+        if c[0] == "taken": return 409, taken
+        if c[0] == "peer_down": return 503, {"error": "We can't finish creating your account right now. Please try again in a few minutes."}
         salt = secrets.token_hex(16); now = time.time()
         with LOCK:
-            if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone(): return self.send(409, taken)
+            if db.execute("SELECT 1 FROM users WHERE name_key=?", (name.casefold(),)).fetchone(): return 409, taken
             cur = db.execute("INSERT INTO users(name,name_key,salt,pin_hash,created,pin_changed) VALUES(?,?,?,?,?,?)", (name, name.casefold(), salt, hp(pin, salt), now, now))
-            uid = cur.lastrowid
-        self._session(uid, True)
+            return 200, cur.lastrowid
+    # ---- Momentum partner API (server-to-server only; shared secret MOMENTUM_API_SECRET, header X-Partner-Secret) ----
+    # Read + one-time verify for the Gymnazo Momentum member app. The member's user_id always comes from Momentum's
+    # own link table (set only after a correct name + PIN here), never from a browser. Member login/write paths are untouched;
+    # logging goes through the exact same add_result() validation members use on this site.
+    def partner_ok(self):
+        """Constant-time secret check. Bad guesses lock out only the guessing IP (so strangers can't lock Momentum out)."""
+        now = time.time(); ip = (self.headers.get("X-Forwarded-For", "").split(",")[-1].strip() or self.client_address[0])
+        with LOCK:
+            n, until = PARTNER_BAD.get(ip, (0, 0.0))
+            if until > now: self.send(429, {"error": "Slow down."}); return False
+            given = self.headers.get("X-Partner-Secret", "")
+            if not PARTNER_SECRET or len(PARTNER_SECRET) < 24 or not hmac.compare_digest(given.encode(), PARTNER_SECRET.encode()):
+                if len(PARTNER_BAD) > 5000: PARTNER_BAD.clear()
+                PARTNER_BAD[ip] = (0, now + 300) if n + 1 >= 8 else (n + 1, 0.0)
+                self.send(401, {"error": "Not allowed."}); return False
+            PARTNER_BAD.pop(ip, None); return True
+    def partner(self, p, b):
+        if not self.partner_ok(): return
+        if p in ("/api/partner/verify", "/api/partner/register"):
+            name = re.sub(r"\s+", " ", str(b.get("name", "")).strip())[:24]; pin = str(b.get("pin", ""))
+            if not name or not re.fullmatch(r"\d{4}", pin): return self.send(400, {"error": "Please type your name and a 4-digit PIN (numbers only)."})
+            if p.endswith("verify"):
+                r = FED.login(name, pin)   # same check (and same 5-try lockout) as logging in on this site
+                if r[0] == "ok":
+                    with LOCK: nm = db.execute("SELECT name FROM users WHERE id=?", (r[1],)).fetchone()[0]
+                    return self.send(200, {"ok": True, "user_id": r[1], "name": nm})
+                return self.send(200, {"ok": False, "locked": r[0] == "locked"})
+            code, res = self.create_account(name, pin)
+            if code != 200: return self.send(code, res)
+            return self.send(200, {"ok": True, "user_id": res, "name": name})
+        if p == "/api/partner/health":
+            return self.send(200, {"ok": True, "backup": os.path.basename(BACKUP) if BACKUP else None, "backupBytes": os.path.getsize(BACKUP) if BACKUP and os.path.exists(BACKUP) else 0})
+        try: uid = int(b.get("user_id"))
+        except Exception: return self.send(400, {"error": "bad request"})
+        with LOCK:
+            r = db.execute("SELECT id,name,picks_saved FROM users WHERE id=?", (uid,)).fetchone()
+            if not r: return self.send(404, {"error": "no such user"})
+            if p == "/api/partner/summary": return self.send(200, dict(self.me(r), home=self.home(r), library=self.library(r)))
+            if p == "/api/partner/metric":
+                try: eid = int(b.get("exercise_id"))
+                except Exception: return self.send(400, {"error": "bad request"})
+                return self.metric(r, eid)
+            if p == "/api/partner/results": return self.add_result(r, b)
+        self.send(404, {"error": "nf"})
+
     def delete_account(self, usr, b):
         r = db.execute("SELECT salt,pin_hash FROM users WHERE id=?", (usr[0],)).fetchone()
         if not hmac.compare_digest(hp(str(b.get("pin", "")), r[0]), r[1]):
