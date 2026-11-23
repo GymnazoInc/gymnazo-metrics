@@ -285,6 +285,56 @@ try:
     blob = json.dumps([call("/api/admin/stats", {}, admin="testpw")[1], call("/api/admin/list", {}, admin="testpw")[1], mem])
     check("admin views never contain member notes", "Feeling stronger" not in blob and "New note" not in blob and "admin loaded" not in blob)
     s, j, _ = call("/api/admin/import-confirm", {"user_id": 99999, "text": "x"}, admin="testpw"); check("admin import unknown member 404", s == 404)
+    # one member's progress (admin only; never PINs or hashes)
+    cid = [x["id"] for x in mem["members"] if x["name"] == "Carol"][0]
+    check("progress needs admin password", call("/api/admin/members/progress", {"id": cid})[0] == 401 and call("/api/admin/members/export", {"id": cid})[0] == 401)
+    check("progress wrong password rejected", call("/api/admin/members/progress", {"id": cid}, admin="nope")[0] == 401 and call("/api/admin/members/export", {"id": cid}, admin="nope")[0] == 401)
+    check("member session is not admin", call("/api/admin/members/progress", {"id": cid}, cookie=ckC)[0] == 401 and call("/api/admin/members/progress", {"id": did}, cookie=ckD)[0] == 401)
+    check("GET progress does not return member data", call("/api/admin/members/progress?id=%s" % cid, cookie=ckC, admin="testpw")[0] == 404)
+    check("progress needs a member id", call("/api/admin/members/progress", {}, admin="testpw")[0] == 400 and call("/api/admin/members/export", {}, admin="testpw")[0] == 400)
+    check("progress unknown member 404", call("/api/admin/members/progress", {"id": 99999}, admin="testpw")[0] == 404 and call("/api/admin/members/export", {"id": 99999}, admin="testpw")[0] == 404)
+    call("/api/track/toggle", {"exercise_id": gx("Gymnazo Mile"), "tracked": False}, ckC)
+    s, pr, _ = call("/api/admin/members/progress", {"id": cid}, admin="testpw")
+    def walk_keys(o, acc=None):
+        acc = set() if acc is None else acc
+        if isinstance(o, dict):
+            acc.update(o.keys())
+            for v in o.values(): walk_keys(v, acc)
+        elif isinstance(o, list):
+            for v in o: walk_keys(v, acc)
+        return acc
+    secret_keys = {"salt", "pin", "pin_hash", "password", "token", "token_hash", "secret", "fails", "locked_until", "name_key"}
+    creds = sqlite3.connect(DBP).execute("select salt, pin_hash from users where name='Carol'").fetchone()
+    blob = json.dumps(pr)
+    grip = next(m for m in pr["metrics"] if m["name"] == "Grip Strength")
+    rh = next(x for x in grip["series"] if x["label"] == "Right Hand")
+    mile_m = next(m for m in pr["metrics"] if m["name"] == "Gymnazo Mile")
+    check("admin progress returns Carol", s == 200 and pr["member"] == {"id": cid, "name": "Carol"} and set(pr) == {"member", "metrics", "badges", "badgeCount", "badgeTotal"})
+    check("progress history, best, and note", rh["best"]["value"] == 66 and rh["first"]["value"] == 60 and any(r["note"] == "Feeling stronger" for r in grip["results"]) and grip["tracked"] is True, grip)
+    check("untracked metric history still shown", mile_m["tracked"] is False and mile_m["better"] == "lower" and mile_m["series"][0]["best"]["value"] == 540)
+    check("tracked metrics listed before untracked", pr["metrics"].index(grip) < pr["metrics"].index(mile_m))
+    check("earned badges included", pr["badgeCount"] == len(pr["badges"]) >= 1 and any(b["code"] == "first_result" and b["title"] and b["earned"] for b in pr["badges"]))
+    check("progress hides pins and secrets", secret_keys.isdisjoint(walk_keys(pr)) and all(c and c not in blob for c in creds), sorted(secret_keys & walk_keys(pr)))
+    s, dave, _ = call("/api/admin/members/progress", {"id": did}, admin="testpw")
+    check("progress is only that member", s == 200 and dave["member"]["name"] == "Dave" and any(m["name"] == "Gymnazo Loop" and any(r["day"] == "2024-05-05" and r["note"] == "admin loaded" for r in m["results"]) for m in dave["metrics"]) and "Feeling stronger" not in json.dumps(dave))
+    s, j, ckE = call("/api/register", {"name": "Eve", "pin": "3333"})
+    eve = [x["id"] for x in call("/api/admin/members", {}, admin="testpw")[1]["members"] if x["name"] == "Eve"][0]
+    s, empty, _ = call("/api/admin/members/progress", {"id": eve}, admin="testpw")
+    check("member with no results", s == 200 and empty["metrics"] == [] and empty["badges"] == [] and empty["badgeCount"] == 0)
+    call("/api/account/delete", {"pin": "3333"}, ckE)
+    def raw_post(path, body, admin=None):
+        c = http.client.HTTPConnection("127.0.0.1", PORT); h = {"Content-Type": "application/json"}
+        if admin is not None: h["X-Admin-Password"] = admin
+        c.request("POST", path, json.dumps(body), h); r = c.getresponse(); data = r.read()
+        return r.status, data, r.getheader("Content-Type"), r.getheader("Content-Disposition")
+    st, data, ctype, disp = raw_post("/api/admin/members/export", {"id": cid}, "testpw")
+    text = data.decode("utf-8-sig")
+    check("admin csv download", st == 200 and "text/csv" in (ctype or "") and "Feeling stronger" in text and text.splitlines()[0].startswith("Date,Exercise,Result") and 'filename="Carol-gymnazo-results.csv"' in (disp or ""), (st, ctype, disp, text.splitlines()[0]))
+    check("admin csv hides secrets", all(c and c not in text for c in creds))
+    st, data, ctype, _ = raw_post("/api/admin/members/export", {"id": cid})
+    check("admin csv refuses missing password", st == 401 and "text/csv" not in (ctype or "") and b"Feeling stronger" not in data)
+    page = call("/admin")[1]; page = page.decode("utf-8") if isinstance(page, bytes) else str(page)
+    check("admin page offers view progress", "View progress" in page and "/api/admin/members/progress" in page and "/api/admin/members/export" in page)
     call("/api/account/delete", {"pin": "1111"}, ckC); call("/api/account/delete", {"pin": "2222"}, ckD)
     # --- migration/seed idempotent: restart doesn't duplicate
     srv.terminate(); srv.wait(); srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "server.py")], env=env); time.sleep(1.2)

@@ -882,8 +882,29 @@ class H(http.server.BaseHTTPRequestHandler):
         if not n: return self.send(404, {"error": "We couldn't find that result."})
         self.send(200, {"ok": 1})
 
-    # ---- admin (aggregate counts only; never individual scores) ----
+    # ---- admin (library + member tools; stats stay aggregate; one member's progress is opt-in) ----
     FAILS = [0, 0.0]
+    def member_progress(self, uid):
+        """Tracked metrics, full history, bests, and earned badges for one member. No PINs or secrets."""
+        r = db.execute("SELECT id,name,picks_saved FROM users WHERE id=?", (uid,)).fetchone()
+        if not r: return None
+        tracked = {row[0] for row in db.execute("SELECT exercise_id FROM tracked WHERE user_id=?", (uid,))}
+        have = tracked | {row[0] for row in db.execute("SELECT DISTINCT exercise_id FROM results WHERE user_id=?", (uid,))}
+        metrics = []
+        if have:
+            marks = ",".join("?" * len(have))
+            rows = db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE id IN (%s) ORDER BY sort,id" % marks, tuple(have)).fetchall()
+            for row in rows:
+                ex = ex_row(row); res = load_results(uid, ex["id"]); sm = analyse(ex["def"], res)
+                metrics.append({"id": ex["id"], "name": ex["name"], "description": ex["description"], "category": ex["category"],
+                                "active": ex["active"], "tracked": ex["id"] in tracked, "sort": ex["sort"], "def": ex["def"], "better": better_of(ex["def"]),
+                                "results": [{"id": x["id"], "day": x["day"], "p": x["p"], "s": x["s"], "t": x["t"], "sel": x["sel"], "note": x["note"], "series": x["series"], "h": x["h"], "isPb": x["is_pb"]} for x in res],
+                                "series": list(sm.values())})
+        metrics.sort(key=lambda m: (0 if m["tracked"] else 1, m["sort"], m["id"]))
+        for m in metrics: del m["sort"]
+        badges = self.badges(r)
+        earned = [b for b in badges["badges"] if b.get("earned")]
+        return {"member": {"id": r[0], "name": r[1]}, "metrics": metrics, "badges": earned, "badgeCount": len(earned), "badgeTotal": len(badges["badges"])}
     def admin(self, p, b):
         if not ADMIN_PASSWORD: return self.send(403, {"error": "Admin is not set up."})
         now = time.time()
@@ -936,6 +957,19 @@ class H(http.server.BaseHTTPRequestHandler):
             return self.send(200, {"dry": bool(b.get("dry")), "added": [a[0] for a in added], "skipped": skipped, "bad": bad})
         if p == "/api/admin/members":  # names only: needed to pick who an import is for
             return self.send(200, {"members": [{"id": r[0], "name": r[1]} for r in db.execute("SELECT id,name FROM users ORDER BY name_key")]})
+        if p == "/api/admin/members/progress":
+            try: uid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "Please choose a member."})
+            data = self.member_progress(uid)
+            if not data: return self.send(404, {"error": "No such member."})
+            return self.send(200, data)
+        if p == "/api/admin/members/export":
+            try: uid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "Please choose a member."})
+            row = db.execute("SELECT name FROM users WHERE id=?", (uid,)).fetchone()
+            if not row: return self.send(404, {"error": "No such member."})
+            fn = re.sub(r"[^A-Za-z0-9._-]+", "-", row[0]).strip("-") or "member"
+            return self.send(200, export_csv(uid).encode("utf-8-sig"), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="%s-gymnazo-results.csv"' % fn})
         if p == "/api/admin/members/reset-pin":
             pin = str(b.get("pin", ""))
             if not re.fullmatch(r"\d{4}", pin): return self.send(400, {"error": "The new PIN must be exactly 4 digits."})

@@ -2,7 +2,7 @@
 
 A private, simple web app for Gymnazo members to track their own ability and capacity test results over time. Intended home: https://metrics.gymnazo.com
 
-- **Members only ever see their own data.** No leaderboards, no sharing.
+- **Members only ever see their own data.** No leaderboards, no sharing. An admin signed in with the admin password can open one member's progress from `/admin`.
 - 35 exercises from the studio's Ability & Capacity Metrics list (`exercises.json`), searchable and grouped by category.
 - Members pick the metrics they want to follow ("My metrics"), log results (time, weight, reps, distance, height, power, with side / equipment / damper choices), edit or delete entries, and see a line chart, personal best and improvement message per metric.
 - Private milestone badges (13), a gentle "ready to test again?" nudge after 90 days, and "Delete my account and data".
@@ -15,7 +15,7 @@ A private, simple web app for Gymnazo members to track their own ability and cap
 - Every result has a private note (up to 500 characters), editable any time from the results list or the chart popup.
 - Import past results (Me tab or My Progress): download the CSV template, fill in, upload or paste, preview, fix names with a dropdown, confirm. Results keep their original dates, exercises are auto-tracked, badges are awarded once with one summary. Max 2,000 rows per import. "Download my results (CSV)" exports everything including notes in the same format.
 - CSV columns: `Date, Exercise, Result, Second result (optional), Side / Hand / Foot, Equipment, Damper, Note`.
-- Admin can import a member's history from /admin (choose member by name, preview, confirm). Admin never sees existing scores or notes.
+- Admin can import a member's history from /admin (choose member by name, preview, confirm). The import preview still does not show results already saved. View progress on the members list opens that one member's tracked metrics, history, bests, and badges.
 
 ## Stack
 Python 3 standard library only (`server.py`), single-file front end (`index.html`), SQLite. No CDNs, no dependencies.
@@ -27,7 +27,7 @@ PORT=8090 DB_PATH=./metrics.db ADMIN_PASSWORD=choose-one python3 server.py
 Env vars: `PORT`, `HOST`, `DB_PATH` (SQLite file), `ADMIN_PASSWORD` (enables `/admin`; never commit it).
 
 ## Admin (`/admin`)
-Protected by `ADMIN_PASSWORD` (sent as the `X-Admin-Password` header). Manage the exercise library (add, edit, hide, reorder, metric types/units, choices), bulk-import exercises from JSON, and see aggregate counts only (members, results, most-tracked exercises). Individual scores are never shown.
+Protected by `ADMIN_PASSWORD` (sent as the `X-Admin-Password` header). Manage the exercise library (add, edit, hide, reorder, metric types/units, choices), bulk-import exercises from JSON, and see aggregate counts (members, results, most-tracked exercises). View progress (`POST /api/admin/members/progress`) returns one member's tracked metrics, each result over time, bests, and earned badges. `POST /api/admin/members/export` downloads that member's results as CSV. Both require the admin password (401 if it is wrong or missing, 403 if admin is not set up) and never include PINs, salts, or password hashes. The numbers card stays counts only.
 
 ## Login
 "I'm new" (name + 4-digit PIN, rejects existing names) and "I already signed up" (log in only, never creates an account). PINs are salted + PBKDF2 hashed; 5 wrong tries lock the account for 5 minutes. Forgot a PIN? Members email Memberservice@gymnazo.com or ask any coach.
