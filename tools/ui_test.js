@@ -28,7 +28,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));let pass=0,fail=0;const ok=(n,c
  await shot('3-picker',true);
  // instant substring search in picker
  const vis=async()=>JSON.parse(await ev(`JSON.stringify([...document.querySelectorAll('#pl label b')].map(b=>b.textContent))`));
- await T('#pq','jump');let v=await vis();ok("search 'jump' (name substring, case-insens)",v.includes('Box Jump')&&v.includes('Anterior Jump')&&v.includes('Anterior Triple Jump')&&v.every(n=>/jump/i.test(n)||['Single Leg Hop','Keiser Max Power Rotation Swing','Barbell Landmine Split Switch Clean & Jerk','Barbell Landmine Split Switch Snatch'].includes(n)),JSON.stringify(v));
+ await T('#pq','jump');let v=await vis();ok("search 'jump' (name substring, case-insens)",v.includes('Box Jump')&&v.includes('Anterior Jump')&&v.includes('Anterior Triple Jump')&&v.every(n=>/jump/i.test(n)||['Single Leg Hop','Keiser Max Power Rotation Swing','Clean and Jerk','Barbell Landmine Split Switch Snatch'].includes(n)),JSON.stringify(v));
  await T('#pq','JUMP');v=await vis();ok("search 'JUMP' same result",v.length===7,JSON.stringify(v));
  await T('#pq','erc');v=await vis();ok("mid-word 'erc' matches Zercher Squat",v.includes('Zercher Squat'),JSON.stringify(v));
  await T('#pq','dynamometer');v=await vis();ok('search matches descriptions',v.includes('Grip Strength'),JSON.stringify(v));

@@ -392,6 +392,32 @@ OLD_NAME_DEFAULTS = {"sledpush20yd": {"t": 20}}
 
 def norm(s): return re.sub(r"[^a-z0-9]", "", str(s).casefold().replace("º", "").replace("&", "and"))
 
+# Previous titles for Clean and Jerk. Import still maps these; the exercise row itself is renamed in place.
+CLEAN_JERK_NAME = "Clean and Jerk"
+CLEAN_JERK_OLD = (
+    "Barbell Landmine Split Switch Clean & Jerk",
+    "Barbell Landmine Split Switch Clean and Jerk",
+    "Landmine Clean & Jerk",
+    "Landmine Clean and Jerk",
+)
+def migrate_clean_jerk():
+    """Rename the landmine clean and jerk to Clean and Jerk on the same exercise id.
+    Results stay linked by exercise_id. If a different exercise is already named Clean and Jerk, leave both rows alone."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_clean_jerk_v1'").fetchone(): return
+    rows = db.execute("SELECT id, name FROM exercises").fetchall()
+    old_norms = {norm(n) for n in CLEAN_JERK_OLD}
+    old = [r for r in rows if norm(r[1]) in old_norms]
+    taken = [r for r in rows if norm(r[1]) == norm(CLEAN_JERK_NAME) and r[0] not in {o[0] for o in old}]
+    if old and (taken or len(old) > 1):
+        db.execute("INSERT OR REPLACE INTO meta VALUES('mig_clean_jerk_v1','collision')")
+        return
+    db.execute("BEGIN")
+    for eid, _name in old:
+        db.execute("UPDATE exercises SET name=? WHERE id=?", (CLEAN_JERK_NAME, eid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_clean_jerk_v1','1')")
+    db.execute("COMMIT")
+migrate_clean_jerk()
+
 def fmt_time(sec):
     sec = int(round(sec)); h, m, x = sec // 3600, sec % 3600 // 60, sec % 60
     return f"{h}:{m:02d}:{x:02d}" if h else f"{m}:{x:02d}"
@@ -439,6 +465,10 @@ def match_option(options, v):
 def match_exercise(q, cands):
     nq = norm(q)
     if not nq: return None, []
+    alias = norm(CLEAN_JERK_NAME) if nq in {norm(n) for n in CLEAN_JERK_OLD} else None
+    if alias:
+        hit = [c for c in cands if c[2] == alias]
+        if len(hit) == 1: return hit[0][0], []
     ex = [c for c in cands if c[2] == nq]
     if len(ex) == 1: return ex[0][0], []
     toks = [t for t in re.findall(r"[a-z0-9]+", str(q).casefold()) if len(t) >= 2]
