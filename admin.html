@@ -34,6 +34,7 @@ input,select,textarea{font:inherit;width:100%;padding:10px;min-height:48px;borde
 <div class="c hide" id="mp"><button class="g" id="mp_back">← All members</button><h2 id="mp_title">Progress</h2><div id="mp_msg" class="er"></div><div id="mp_body"></div></div>
 <div class="c"><h2>Import past results for a member</h2><div class="s">Choose the member, then paste or upload their CSV (columns: Date, Exercise, Result, Second result, Side / Hand / Foot, Equipment, Damper, Note). You see a preview first. Nothing is saved until you confirm. Existing results and notes are never shown here.</div>
 <label>Member</label><select id="im_u"></select><input type="file" id="im_f" accept=".csv,.txt"><textarea id="im_t" rows="6" placeholder="Date,Exercise,Result,..."></textarea><button id="im_p">Preview</button><div id="im_o"></div></div>
+<div class="c" id="rq_box"><h2>Metric requests</h2><div class="s">Members can ask for a metric that is not in the library. Nothing is emailed. Mark a request reviewed once you have looked at it.</div><div id="rq"></div></div>
 <div class="c"><h2>Bulk import</h2><div class="s">Paste JSON like the file exercises.json: {"exercises":[{"name","description","category","primary":{"type","label","unit","better"},"secondary":null,"selectors":[]}]}. Names that already exist are skipped.</div><textarea id="bk" rows="8" placeholder='{"exercises":[...]}'></textarea><button id="pv">Preview</button><button id="im" class="g">Import</button><div id="bo" class="s"></div></div>
 </div></div>
 <script>
@@ -41,7 +42,7 @@ const $=id=>document.getElementById(id);let PW='',EX=[],EID=null;const TY=['time
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function A(p,b){const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':PW},body:JSON.stringify(b||{})});let j={};try{j=await r.json()}catch(e){}return {ok:r.ok,j}}
 ['pt','st2'].forEach(i=>$(i).innerHTML=TY.map(t=>`<option>${t}</option>`).join(''));
-$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load();loadMem()};
+$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load();loadMem();loadReq()};
 function stats(j){$('st').innerHTML=`<table><tr><td>Members</td><td><b>${j.members}</b></td></tr><tr><td>Results logged</td><td><b>${j.results}</b></td></tr><tr><td>Badges earned</td><td><b>${j.badgesAwarded}</b></td></tr><tr><td>Active exercises</td><td><b>${j.exercises}</b></td></tr></table><h3>Most tracked</h3><table><tr><th>Exercise</th><th>Members tracking</th><th>Results</th></tr>${j.popular.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.trackers}</td><td>${p.results}</td></tr>`).join('')}</table>`}
 async function load(){const {j}=await A('/api/admin/list');EX=j.exercises||[];$('cats').innerHTML=[...new Set(EX.map(e=>e.category))].map(c=>`<option value="${esc(c)}">`).join('');
  $('lst').innerHTML=EX.map((e,i)=>`<div class="ex"><div class="t"><b>${esc(e.name)}</b> ${e.active?'':'<span class="er">(hidden)</span>'}<div class="s">${esc(e.category)} · ${esc(e.def.primary.type)} (${esc(e.def.primary.unit)}, ${e.def.primary.better} is better)${e.def.secondary?' + '+esc(e.def.secondary.type):''}${e.def.third?' + '+esc(e.def.third.label)+(e.def.third.optional?' (optional)':''):''}${e.def.selectors.length?' · choices: '+e.def.selectors.map(x=>esc(x.key)).join(', '):''}</div></div><button class="g" data-e="${e.id}">Edit</button><button class="g" data-u="${i}" aria-label="Move up">↑</button></div>`).join('');
@@ -67,7 +68,7 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 function fmtDay(d){const p=String(d||'').split('-');if(p.length<3||!MON[+p[1]-1])return String(d||'');return MON[+p[1]-1]+' '+(+p[2])+', '+p[0]}
 function fmtTime(sec){sec=Math.round(sec);const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),x=sec%60,p=n=>String(n).padStart(2,'0');return h?h+':'+p(m)+':'+p(x):m+':'+p(x)}
 function fmtNum(v){return String(Math.round(v*100)/100)}
-function fmtM(m,v){if(v==null||v==='')return '—';if(!m)return fmtNum(v);if(m.type==='time')return m.unit==='sec'&&v<60?Math.round(v)+' sec':fmtTime(v);return fmtNum(v)+(m.unit?' '+m.unit:'')}
+function fmtM(m,v){if(v==null||v==='')return '—';if(!m)return fmtNum(v);if(m.type==='time')return m.unit==='sec'&&v<60?Math.round(v)+' sec':fmtTime(v);if(m.type==='weight')return fmtNum(v)+' lb ('+fmtNum(v*0.45359237)+' kg)';return fmtNum(v)+(m.unit?' '+m.unit:'')}
 function hm(def){return def&&def.headline==='secondary'&&def.secondary?def.secondary:(def&&def.primary)||{type:'number',label:'Result',unit:''}}
 function resLine(d,r){return esc(fmtM(d.primary,r.p))+(d.secondary&&r.s!=null?' · '+esc(fmtM(d.secondary,r.s)):'')+(d.third&&r.t!=null?' · '+esc(fmtM(d.third,r.t)):'')}
 function selTxt(d,sel){return (d.selectors||[]).filter(x=>sel&&sel[x.key]).map(x=>sel[x.key]).join(' · ')}
@@ -105,6 +106,10 @@ async function downloadCsv(member){if(!member)return;$('mp_msg').textContent='';
  const name=String(member.name||'member').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'')||'member';
  a.download=name+'-gymnazo-results.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
 $('mp_back').onclick=()=>showAdmin(false);
+function reqWhen(t){if(!t)return '';const d=new Date(t*1000);return isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}
+async function loadReq(){const {ok,j}=await A('/api/admin/metric-requests');if(!ok){$('rq').innerHTML='<p class="er">'+esc(j.error||'Could not load requests.')+'</p>';return}const rows=j.requests||[];
+ $('rq').innerHTML=rows.length?rows.map(r=>`<div class="ex" style="align-items:flex-start"><div class="t"><b>${esc(r.name)}</b> <span class="s">${esc(r.status)}</span><div class="s">${esc(r.member)} · ${esc(reqWhen(r.created))}${r.unit?' · '+esc(r.unit):''}</div><div>${esc(r.details)}</div></div><button class="g" data-rq="${r.id}" data-st="${r.status==='new'?'reviewed':'new'}">${r.status==='new'?'Mark reviewed':'Mark new'}</button></div>`).join(''):'<div class="s">No requests yet.</div>';
+ $('rq').querySelectorAll('[data-rq]').forEach(b=>b.onclick=async()=>{const res=await A('/api/admin/metric-requests/status',{id:+b.dataset.rq,status:b.dataset.st});if(!res.ok){$('rq').insertAdjacentHTML('afterbegin','<p class="er">'+esc(res.j.error||'Could not update that request.')+'</p>');return}loadReq()})}
 $('im_f').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>$('im_t').value=r.result;r.readAsText(f)};
 async function imPrev(reset){if(reset)IMF={};const u=$('im_u').value;if(!u){$('im_o').innerHTML='<span class="er">Please choose a member.</span>';return}
  const {ok,j}=await A('/api/admin/import-preview',{user_id:+u,text:$('im_t').value,fixes:IMF});if(!ok){$('im_o').innerHTML='<span class="er">'+esc(j.error||'Error')+'</span>';return}

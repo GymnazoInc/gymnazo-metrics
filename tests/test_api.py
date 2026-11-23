@@ -339,13 +339,55 @@ try:
     # --- migration/seed idempotent: restart doesn't duplicate
     srv.terminate(); srv.wait(); srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "server.py")], env=env); time.sleep(1.2)
     s, al, _ = call("/api/admin/list", {}, admin="testpw"); check("restart keeps data, no re-seed", len(al["exercises"]) == 37)
+    # --- pounds / kilograms (stored as pounds; kg is input only) and metric requests
+    KG = 0.45359237
+    kept = sqlite3.connect(DBP).execute("select pval from results where user_id=(select id from users where name='Alice') order by id limit 1").fetchone()[0]
+    s, me0, _ = call("/api/me", cookie=ckA); check("default weight unit is pounds", me0.get("weightUnit") == "lb" and me0.get("weightUnits") == {})
+    s, j, _ = call("/api/prefs/weight", {"unit": "kg"}, ckA); check("account unit kilograms", s == 200 and j["weightUnit"] == "kg")
+    s, j, _ = call("/api/prefs/weight", {"unit": "lb", "exercise_id": g}, ckA); check("per-metric unit override", s == 200 and j["weightUnit"] == "kg" and j["weightUnits"].get(str(g)) == "lb")
+    check("weight pref needs login", call("/api/prefs/weight", {"unit": "kg"})[0] == 401)
+    check("weight pref rejects other units", call("/api/prefs/weight", {"unit": "stone"}, ckA)[0] == 400)
+    same = sqlite3.connect(DBP).execute("select pval from results where user_id=(select id from users where name='Alice') order by id limit 1").fetchone()[0]
+    check("existing stored pounds are unchanged", kept == same)
+    s, j, _ = call("/api/results", {"exercise_id": g, "primary": 101, "selectors": {"hand": "Right Hand"}, "day": "2026-10-02"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
+    check("omitted unit is stored as pounds", s == 200 and any(r["day"] == "2026-10-02" and r["p"] == 101 for r in m["results"]))
+    s, j, _ = call("/api/results", {"exercise_id": g, "primary": 40, "selectors": {"hand": "Left Hand"}, "day": "2026-10-02", "weight_unit": "kg"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
+    kgrow = [r for r in m["results"] if r["day"] == "2026-10-02" and r["sel"].get("hand") == "Left Hand"][0]
+    check("kilograms stored once as pounds", s == 200 and abs(kgrow["p"] - round(40 / KG, 4)) < 1e-6 and kgrow["p"] != 40, kgrow["p"])
+    check("kilograms round-trip for display", abs(round(kgrow["p"] * KG, 2) - 40) < 0.001)
+    check("bad weight unit rejected", call("/api/results", {"exercise_id": g, "primary": 10, "selectors": {"hand": "Right Hand"}, "weight_unit": "stone"}, ckA)[0] == 400)
+    s, j, _ = call("/api/results", {"exercise_id": ex["Single Leg Balance"]["id"], "primary": 40, "secondary": 10, "selectors": {"side": "Left Leg"}, "day": "2026-10-04", "weight_unit": "kg"}, ckA)
+    s, bal, _ = call(f"/api/metric?exercise_id={ex['Single Leg Balance']['id']}", cookie=ckA)
+    brow = [r for r in bal["results"] if r["day"] == "2026-10-04"][-1]
+    check("only weight fields convert", brow["p"] == 40 and abs(brow["s"] - round(10 / KG, 4)) < 1e-6, brow)
+    s, j, _ = call("/api/results/update", {"id": kgrow["id"], "primary": 41, "selectors": {"hand": "Left Hand"}, "day": "2026-10-02", "weight_unit": "kg"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
+    edited = [r for r in m["results"] if r["id"] == kgrow["id"]][0]
+    check("edit in kilograms stores pounds", s == 200 and abs(edited["p"] - round(41 / KG, 4)) < 1e-6, edited["p"])
+    check("metric request needs login", call("/api/metric-requests", {"name": "Farmer carry", "details": "Distance walked"})[0] == 401)
+    s, j, _ = call("/api/metric-requests", {"name": "Farmer carry <b>walk</b>", "details": "How far you walk while carrying weights", "unit": "kg"}, ckA)
+    check("metric request saved", s == 200 and j.get("ok") is True and isinstance(j.get("id"), int) and set(j) == {"ok", "id"})
+    check("metric request needs how to measure", call("/api/metric-requests", {"name": "Nope"}, ckA)[0] == 400)
+    check("admin requests need password", call("/api/admin/metric-requests", {}, method="POST")[0] == 401 and call("/api/admin/metric-requests", {}, cookie=ckA)[0] == 401)
+    s, j, _ = call("/api/admin/metric-requests", {}, admin="testpw")
+    req = [r for r in j["requests"] if r["member"] == "Alice" and "Farmer carry" in r["name"]][0]
+    check("admin lists the request", s == 200 and req["status"] == "new" and req["unit"] == "kg" and "<" not in req["name"] and req["details"].startswith("How far") and set(req) == {"id", "member", "name", "details", "unit", "status", "created"})
+    s, j, _ = call("/api/admin/metric-requests/status", {"id": req["id"], "status": "reviewed"}, admin="testpw")
+    s, again, _ = call("/api/admin/metric-requests", {}, admin="testpw")
+    check("admin can mark reviewed", s == 200 and [r for r in again["requests"] if r["id"] == req["id"]][0]["status"] == "reviewed")
+    check("admin rejects other statuses", call("/api/admin/metric-requests/status", {"id": req["id"], "status": "approved"}, admin="testpw")[0] == 400)
+    home = call("/")[1]; home = home.decode("utf-8") if isinstance(home, bytes) else str(home)
+    adm = call("/admin")[1]; adm = adm.decode("utf-8") if isinstance(adm, bytes) else str(adm)
+    check("pages offer units and requests", "Kilograms" in home and "Request a metric" in home and "Metric requests" in adm and "lb (" in adm)
     # --- account deletion
     s, j, _ = call("/api/account/delete", {"pin": "0000"}, ckB); check("delete account wrong pin refused", s == 401)
     s, j, _ = call("/api/account/delete", {"pin": "4321"}, ckB); check("delete account ok", s == 200)
     check("deleted session invalid", call("/api/me", cookie=ckB)[0] == 401)
     s, j, _ = call("/api/login", {"name": "Bob", "pin": "4321"}); check("deleted user cannot log in", s == 401)
     s, j, _ = call("/api/account/delete", {"pin": "1234"}, ckA); 
-    c = sqlite3.connect(DBP); check("all Alice data removed", all(c.execute(f"select count(*) from {t}").fetchone()[0] == 0 for t in ("users", "results", "tracked", "badges", "sessions")))
+    c = sqlite3.connect(DBP); check("all Alice data removed", all(c.execute(f"select count(*) from {t}").fetchone()[0] == 0 for t in ("users", "results", "tracked", "badges", "sessions", "unit_pref", "metric_requests")))
     # xss: note stored stripped, notes are only rendered escaped client-side
 finally:
     srv.terminate()

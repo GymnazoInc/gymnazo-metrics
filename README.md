@@ -6,6 +6,8 @@ A private, simple web app for Gymnazo members to track their own ability and cap
 - 35 exercises from the studio's Ability & Capacity Metrics list (`exercises.json`), searchable and grouped by category.
 - Members pick the metrics they want to follow ("My metrics"), log results (time, weight, reps, distance, height, power, with side / equipment / damper choices), edit or delete entries, and see a line chart, personal best and improvement message per metric.
 - Private milestone badges (13), a gentle "ready to test again?" nudge after 90 days, and "Delete my account and data".
+- Weight is stored in pounds. Each member can show and type pounds or kilograms (account-wide, or for one metric). Older results stay in pounds and still display correctly.
+- A member can request a metric (name, how they would measure it, optional unit). It is saved for an admin to mark new or reviewed. No email is sent.
 - Built for members over 40: 56px+ tap targets, 18px+ text, plain language.
 - Branding based on gymnazo.com: brand orange `#d4631c` (sampled from the site logo), charcoal text, white/warm background, Avenir Next-style font stack, logo from the site, tagline "Train for the decades ahead" / "Move With Confidence".
 

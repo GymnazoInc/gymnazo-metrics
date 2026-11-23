@@ -10,6 +10,8 @@ DB = os.environ.get("DB_PATH") or os.path.join(HERE, "metrics.db")
 PORT = int(os.environ.get("PORT", 8090))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 TYPES = ("time", "weight", "reps", "distance", "height", "power", "number")
+# Weight is stored once, in pounds. Kilograms are converted on the way in and only for display.
+KG_PER_LB = 0.45359237
 LOCK = threading.RLock()
 PARTNER_SECRET = os.environ.get("MOMENTUM_API_SECRET", "")
 PARTNER_BAD = {}  # ip -> (bad tries, locked until)
@@ -50,6 +52,10 @@ def add_columns():
     """Nullable third measure (e.g. sled push distance). ADD COLUMN only; existing rows read as NULL."""
     if "tval" not in [r[1] for r in db.execute("PRAGMA table_info(results)")]:
         db.execute("ALTER TABLE results ADD COLUMN tval REAL")
+    if "weight_unit" not in [r[1] for r in db.execute("PRAGMA table_info(users)")]:
+        db.execute("ALTER TABLE users ADD COLUMN weight_unit TEXT DEFAULT 'lb'")
+    db.execute("CREATE TABLE IF NOT EXISTS unit_pref(user_id INTEGER, exercise_id INTEGER, unit TEXT, PRIMARY KEY(user_id, exercise_id))")
+    db.execute("CREATE TABLE IF NOT EXISTS metric_requests(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, details TEXT, unit TEXT, status TEXT DEFAULT 'new', created REAL, reviewed REAL)")
 add_columns()
 
 # ---------- seed ----------
@@ -333,6 +339,14 @@ def evaluate_badges(uid):
     return [badge_obj(c) for c in new]
 
 # ---------- result validation ----------
+def canonicalize_weight(d, parsed, unit):
+    """Store weight measures in pounds. 'lb' or a missing unit means the number is already pounds."""
+    if unit != "kg": return parsed
+    for key, m in (("p", d.get("primary")), ("s", d.get("secondary")), ("t", d.get("third"))):
+        if m and m.get("type") == "weight" and parsed.get(key) is not None:
+            parsed[key] = round(parsed[key] / KG_PER_LB, 4)
+    return parsed
+
 def parse_measure(m, v, required):
     if v in (None, ""):
         return (None, None) if not required else (None, "Please fill in " + m["label"].lower().rstrip("?") + ".")
@@ -632,9 +646,15 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self.metric(usr, eid)
         self.send(404, {"error": "nf"})
 
+    def weight_prefs(self, uid):
+        row = db.execute("SELECT weight_unit FROM users WHERE id=?", (uid,)).fetchone()
+        unit = row[0] if row and row[0] in ("lb", "kg") else "lb"
+        overs = {str(eid): u for eid, u in db.execute("SELECT exercise_id, unit FROM unit_pref WHERE user_id=?", (uid,)) if u in ("lb", "kg")}
+        return unit, overs
     def me(self, usr):
         tr = [r[0] for r in db.execute("SELECT exercise_id FROM tracked WHERE user_id=?", (usr[0],))]
-        return {"name": usr[1], "picksSaved": bool(usr[2]), "tracked": tr, "today": today().isoformat()}
+        unit, overs = self.weight_prefs(usr[0])
+        return {"name": usr[1], "picksSaved": bool(usr[2]), "tracked": tr, "today": today().isoformat(), "weightUnit": unit, "weightUnits": overs}
 
     def library(self, usr):
         tr = {r[0] for r in db.execute("SELECT exercise_id FROM tracked WHERE user_id=?", (usr[0],))}
@@ -711,6 +731,8 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self.send(400 if "error" in r else 200, r)
             if p == "/api/nudge/hide":
                 db.execute("UPDATE users SET hide_nudge_until=? WHERE id=?", (time.time() + 30 * 86400, usr[0])); return self.send(200, {"ok": 1})
+            if p == "/api/prefs/weight": return self.set_weight_pref(usr, b)
+            if p == "/api/metric-requests": return self.add_metric_request(usr, b)
             if p == "/api/account/delete": return self.delete_account(usr, b)
         self.send(404, {"error": "nf"})
 
@@ -805,8 +827,7 @@ class H(http.server.BaseHTTPRequestHandler):
         r = db.execute("SELECT salt,pin_hash FROM users WHERE id=?", (usr[0],)).fetchone()
         if not hmac.compare_digest(hp(str(b.get("pin", "")), r[0]), r[1]):
             return self.send(401, {"error": "That PIN doesn't match. Nothing was deleted."})
-        for t in ("results", "tracked", "badges", "sessions"): db.execute(f"DELETE FROM {t} WHERE user_id=?", (usr[0],))
-        db.execute("DELETE FROM users WHERE id=?", (usr[0],))
+        self.wipe_user(usr[0])
         self.send(200, {"deleted": True}, cookie="mx=; Path=/; Max-Age=0")
 
     # tracking
@@ -844,13 +865,46 @@ class H(http.server.BaseHTTPRequestHandler):
         if not me or me["h"] is None: return False
         others = [r["h"] for r in res if r["id"] != rid and r["series"] == me["series"] and r["h"] is not None]
         return bool(others) and all(beats(better, me["h"], o) for o in others)
+    def _weight_unit(self, b):
+        wu = b.get("weight_unit", "lb")
+        if wu in (None, ""): wu = "lb"
+        if wu not in ("lb", "kg"): return None
+        return wu
+    def set_weight_pref(self, usr, b):
+        unit = str(b.get("unit") or "")
+        if unit not in ("lb", "kg"): return self.send(400, {"error": "Choose pounds or kilograms."})
+        if b.get("exercise_id") in (None, ""):
+            db.execute("UPDATE users SET weight_unit=? WHERE id=?", (unit, usr[0]))
+        else:
+            try: eid = int(b.get("exercise_id"))
+            except Exception: return self.send(400, {"error": "bad request"})
+            if not get_ex(eid): return self.send(404, {"error": "That exercise isn't available."})
+            if b.get("clear"): db.execute("DELETE FROM unit_pref WHERE user_id=? AND exercise_id=?", (usr[0], eid))
+            else: db.execute("INSERT OR REPLACE INTO unit_pref(user_id,exercise_id,unit) VALUES(?,?,?)", (usr[0], eid, unit))
+        unit, overs = self.weight_prefs(usr[0])
+        self.send(200, {"weightUnit": unit, "weightUnits": overs})
+    def add_metric_request(self, usr, b):
+        name, details, unit = clean(b.get("name"), 80), clean(b.get("details"), 500), clean(b.get("unit"), 24)
+        if not name: return self.send(400, {"error": "Please name the metric."})
+        if not details: return self.send(400, {"error": "Please say how you would measure it."})
+        if db.execute("SELECT COUNT(*) FROM metric_requests WHERE user_id=?", (usr[0],)).fetchone()[0] >= 30:
+            return self.send(400, {"error": "That's a lot of requests. Please ask a coach at the studio."})
+        cur = db.execute("INSERT INTO metric_requests(user_id,name,details,unit,status,created) VALUES(?,?,?,?, 'new', ?)", (usr[0], name, details, unit, time.time()))
+        self.send(200, {"ok": True, "id": cur.lastrowid})
+    def wipe_user(self, uid):
+        for t in ("results", "tracked", "badges", "sessions", "unit_pref", "metric_requests"):
+            db.execute(f"DELETE FROM {t} WHERE user_id=?", (uid,))
+        db.execute("DELETE FROM users WHERE id=?", (uid,))
     def add_result(self, usr, b):
         try: eid = int(b.get("exercise_id"))
         except Exception: return self.send(400, {"error": "bad request"})
         ex = get_ex(eid)
         if not ex or not ex["active"]: return self.send(404, {"error": "That exercise isn't available."})
+        wu = self._weight_unit(b)
+        if not wu: return self.send(400, {"error": "Choose pounds or kilograms."})
         r, err = parse_result(ex["def"], b)
         if err: return self.send(400, {"error": err})
+        r = canonicalize_weight(ex["def"], r, wu)
         if db.execute("SELECT COUNT(*) FROM results WHERE user_id=?", (usr[0],)).fetchone()[0] >= 20000:
             return self.send(400, {"error": "That's a lot of results! Please contact the studio."})
         cur = db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,tval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?,?)",
@@ -864,8 +918,12 @@ class H(http.server.BaseHTTPRequestHandler):
         except Exception: return self.send(400, {"error": "bad request"})
         row = db.execute("SELECT exercise_id FROM results WHERE id=? AND user_id=?", (rid, usr[0])).fetchone()
         if not row: return self.send(404, {"error": "We couldn't find that result."})
-        ex = get_ex(row[0]); r, err = parse_result(ex["def"], b)
+        ex = get_ex(row[0])
+        wu = self._weight_unit(b)
+        if not wu: return self.send(400, {"error": "Choose pounds or kilograms."})
+        r, err = parse_result(ex["def"], b)
         if err: return self.send(400, {"error": err})
+        r = canonicalize_weight(ex["def"], r, wu)
         db.execute("UPDATE results SET day=?,pval=?,sval=?,tval=?,selectors=?,note=? WHERE id=?", (r["day"], r["p"], r["s"], r["t"], json.dumps(r["sel"]), r["note"], rid))
         res = load_results(usr[0], row[0]); analyse(ex["def"], res)
         self.send(200, {"id": rid, "pb": self._is_best_now(ex, res, rid), "newBadges": evaluate_badges(usr[0])})
@@ -970,6 +1028,17 @@ class H(http.server.BaseHTTPRequestHandler):
             if not row: return self.send(404, {"error": "No such member."})
             fn = re.sub(r"[^A-Za-z0-9._-]+", "-", row[0]).strip("-") or "member"
             return self.send(200, export_csv(uid).encode("utf-8-sig"), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="%s-gymnazo-results.csv"' % fn})
+        if p == "/api/admin/metric-requests":
+            rows = db.execute("SELECT q.id,u.name,q.name,q.details,q.unit,q.status,q.created FROM metric_requests q JOIN users u ON u.id=q.user_id ORDER BY CASE q.status WHEN 'new' THEN 0 ELSE 1 END, q.created DESC, q.id DESC").fetchall()
+            return self.send(200, {"requests": [{"id": r[0], "member": r[1], "name": r[2], "details": r[3], "unit": r[4] or "", "status": r[5], "created": r[6]} for r in rows]})
+        if p == "/api/admin/metric-requests/status":
+            try: rid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "bad request"})
+            status = str(b.get("status") or "")
+            if status not in ("new", "reviewed"): return self.send(400, {"error": "Choose new or reviewed."})
+            n = db.execute("UPDATE metric_requests SET status=?, reviewed=? WHERE id=?", (status, time.time() if status == "reviewed" else None, rid)).rowcount
+            if not n: return self.send(404, {"error": "No such request."})
+            return self.send(200, {"ok": 1, "status": status})
         if p == "/api/admin/members/reset-pin":
             pin = str(b.get("pin", ""))
             if not re.fullmatch(r"\d{4}", pin): return self.send(400, {"error": "The new PIN must be exactly 4 digits."})
@@ -988,8 +1057,7 @@ class H(http.server.BaseHTTPRequestHandler):
             r = db.execute("SELECT name FROM users WHERE id=?", (uid,)).fetchone()
             if not r: return self.send(404, {"error": "No such member."})
             if str(b.get("confirm", "")).strip().casefold() != r[0].casefold(): return self.send(400, {"error": "Type the member's name exactly to confirm."})
-            for t in ("results", "tracked", "badges", "sessions"): db.execute(f"DELETE FROM {t} WHERE user_id=?", (uid,))
-            db.execute("DELETE FROM users WHERE id=?", (uid,))
+            self.wipe_user(uid)
             return self.send(200, {"deleted": True})
         if p in ("/api/admin/import-preview", "/api/admin/import-confirm"):
             try: uid = int(b.get("user_id"))
