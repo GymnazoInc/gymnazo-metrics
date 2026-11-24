@@ -46,6 +46,12 @@ try:
     check("35 exercises seeded", len(lib["exercises"]) == 35, len(lib["exercises"]))
     jerk_names = [n for n in ex if "jerk" in n.casefold()]
     check("landmine clean and jerk renamed, no second exercise", jerk_names == ["Clean and Jerk"] and "Barbell Landmine Split Switch Clean & Jerk" not in ex, jerk_names)
+    cjx = ex["Clean and Jerk"]
+    eq = next(x for x in cjx["def"]["selectors"] if x["key"] == "equipment")
+    check("clean and jerk uses the shared equipment list", eq["options"] == ["Barbell", "Landmine", "Dumbbell", "Kettlebell"] and eq["required"] is True and eq["series"] is True and eq.get("list") == "free_weight")
+    check("shared equipment list is only on clean and jerk", [n for n, e in ex.items() if any(x.get("list") == "free_weight" or "Landmine" in x.get("options", []) for x in e["def"]["selectors"])] == ["Clean and Jerk"])
+    s, j, _ = call("/api/results", {"exercise_id": cjx["id"], "primary": 95, "selectors": {"hand": "Right Hand"}, "day": "2026-06-02"}, ckA)
+    check("clean and jerk equipment required", s == 400 and "equipment" in j["error"].lower(), j)
     check("7 categories", len(lib["categories"]) == 7, lib["categories"])
     # --- track/untrack
     s, j, _ = call("/api/track", {"ids": [ex["Grip Strength"]["id"], ex["Gymnazo Mile"]["id"], 99999]}, ckA); check("picker saves valid ids only", j["tracked"] == sorted([ex["Grip Strength"]["id"], ex["Gymnazo Mile"]["id"]]))
@@ -72,6 +78,17 @@ try:
     j = log(g, 60, "2026-03-11", {"hand": "Left Hand"}); check("PB is per series (left hand first result not PB)", not j["pb"])
     s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
     check("series split by hand", {x["label"] for x in m["series"]} == {"Right Hand", "Left Hand"})
+    s, j, _ = call("/api/results", {"exercise_id": cjx["id"], "primary": 95, "selectors": {"hand": "Right Hand", "equipment": "Landmine"}, "day": "2026-06-02"}, ckA)
+    check("clean and jerk landmine log", s == 200)
+    s, j, _ = call("/api/results", {"exercise_id": cjx["id"], "primary": 40, "selectors": {"hand": "Right Hand", "equipment": "Dumbbell"}, "day": "2026-06-03"}, ckA)
+    check("clean and jerk dumbbell log", s == 200)
+    s, cjm, _ = call(f"/api/metric?exercise_id={cjx['id']}", cookie=ckA)
+    by = {x["label"]: x for x in cjm["series"]}
+    check("bests are separate per equipment", set(by) == {"Landmine · Right Hand", "Dumbbell · Right Hand"} and by["Landmine · Right Hand"]["best"]["value"] == 95 and by["Dumbbell · Right Hand"]["best"]["value"] == 40, by)
+    aid = [x["id"] for x in call("/api/admin/members", {}, admin="testpw")[1]["members"] if x["name"] == "Alice"][0]
+    s, pr, _ = call("/api/admin/members/progress", {"id": aid}, admin="testpw")
+    cm = next(x for x in pr["metrics"] if x["name"] == "Clean and Jerk")
+    check("admin history shows equipment", s == 200 and {r["sel"].get("equipment") for r in cm["results"]} == {"Landmine", "Dumbbell"} and {x["label"] for x in cm["series"]} == {"Landmine · Right Hand", "Dumbbell · Right Hand"})
     rh = [x for x in m["series"] if x["label"] == "Right Hand"][0]; check("series best/first/latest", rh["best"]["value"] == 90 and rh["first"]["value"] == 80 and rh["latest"]["value"] == 90 and rh["trend"] == "up")
     # lower is better (time)
     j = log(mile, 600, "2026-01-05"); j = log(mile, 540, "2026-04-05"); check("lower-better: faster is PB", j["pb"])
@@ -100,7 +117,9 @@ try:
     s, m, _ = call(f"/api/metric?exercise_id={sa}", cookie=ckA); check("SAOP reps + equipment stored", any(r["s"] == 8 and r["sel"].get("equipment") == "PowerBlock" for r in m["results"]), m)
     s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Second result,Side / Hand / Foot,Equipment\n2025-01-01,Kettlebell Single Arm Overhead Press,30,6,Right Hand,Kettlebell"}, ckA); check("CSV with old KB name still maps to renamed activity", s == 200 and j["counts"]["ok"] == 1, j)
     s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Side / Hand / Foot\n2025-02-02,Barbell Landmine Split Switch Clean & Jerk,45,Right Hand\n2025-02-03,landmine clean and jerk,50,Left Hand"}, ckA)
-    check("old clean and jerk names map to Clean and Jerk", s == 200 and j["counts"]["ok"] == 2 and {r["exercise"] for r in j["rows"]} == {"Clean and Jerk"}, j)
+    check("old clean and jerk names map to Clean and Jerk with Landmine", s == 200 and j["counts"]["ok"] == 2 and {r["exercise"] for r in j["rows"]} == {"Clean and Jerk"} and all(r["sel"].get("equipment") == "Landmine" for r in j["rows"]), j)
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Side / Hand / Foot\n2025-02-04,Clean and Jerk,55,Right Hand"}, ckA)
+    check("new clean and jerk name still asks for equipment", s == 200 and j["counts"]["problem"] == 1 and "equipment" in j["rows"][0]["error"].lower(), j)
     sn = ex["Single Arm Snatch"]["id"]; check("old KB snatch name gone", "Kettlebell Single Arm Snatch" not in ex)
     s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "secondary": 5, "selectors": {"hand": "Right Hand"}, "day": "2026-06-02"}, ckA); check("snatch equipment required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "selectors": {"hand": "Right Hand", "equipment": "FitFighter"}, "day": "2026-06-02"}, ckA); check("snatch reps required", s == 400)

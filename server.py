@@ -59,12 +59,28 @@ def add_columns():
 add_columns()
 
 # ---------- seed ----------
+# Named equipment lists live in exercises.json. A selector with "list": "<name>" uses that array.
+# Only Clean and Jerk references one today; other exercises can reuse a list the same way.
+CATALOG = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
+EQUIPMENT_LISTS = CATALOG.get("equipmentLists") or {}
+
+def apply_equipment_lists(d):
+    """Fill selector options from equipmentLists. The named list wins over a copied options array."""
+    if not isinstance(d, dict) or not d.get("selectors"): return d
+    sels = []
+    for x in d["selectors"]:
+        x = dict(x)
+        opts = EQUIPMENT_LISTS.get(x.get("list"))
+        if opts: x["options"] = [str(o) for o in opts]
+        sels.append(x)
+    out = dict(d); out["selectors"] = sels
+    return out
+
 def seed():
     if db.execute("SELECT 1 FROM meta WHERE k='seeded'").fetchone(): return
     if db.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == 0:
-        data = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
-        for e in data["exercises"]:
-            d = {k: e.get(k) for k in ("primary", "secondary", "third", "selectors", "headline")}
+        for e in CATALOG["exercises"]:
+            d = apply_equipment_lists({k: e.get(k) for k in ("primary", "secondary", "third", "selectors", "headline")})
             db.execute("INSERT INTO exercises(name,description,category,sort,active,def) VALUES(?,?,?,?,1,?)",
                        (e["name"], e["description"], e["category"], e.get("sort", 0), json.dumps(d)))
     db.execute("INSERT OR REPLACE INTO meta VALUES('seeded','1')")
@@ -193,10 +209,14 @@ def validate_def(d):
         t = measure(d["third"], True) if d.get("third") else None
         sels = []
         for x in (d.get("selectors") or [])[:4]:
-            opts = [clean(o, 30) for o in x.get("options", []) if clean(o, 30)][:12]
+            listed = EQUIPMENT_LISTS.get(str(x.get("list") or ""))
+            raw_opts = listed if listed else x.get("options", [])
+            opts = [clean(o, 30) for o in raw_opts if clean(o, 30)][:12]
             key = re.sub(r"[^a-z0-9_]", "", str(x.get("key", "")).lower())[:20]
             if not key or len(opts) < 2: raise ValueError("Each choice needs a short key and at least 2 options.")
-            sels.append({"key": key, "label": clean(x.get("label"), 80) or key, "options": opts, "required": bool(x.get("required", True)), "series": bool(x.get("series", True))})
+            item = {"key": key, "label": clean(x.get("label"), 80) or key, "options": opts, "required": bool(x.get("required", True)), "series": bool(x.get("series", True))}
+            if listed: item["list"] = str(x.get("list"))
+            sels.append(item)
         if len({x["key"] for x in sels}) != len(sels): raise ValueError("Choice keys must be different.")
         h = d.get("headline") if d.get("headline") in ("primary", "secondary") else "primary"
         if h == "secondary" and not s: h = "primary"
@@ -205,7 +225,7 @@ def validate_def(d):
     except Exception: return None, "That exercise definition isn't valid."
 
 def ex_row(r, full=True):
-    return {"id": r[0], "name": r[1], "description": r[2], "category": r[3], "sort": r[4], "active": bool(r[5]), "def": json.loads(r[6])}
+    return {"id": r[0], "name": r[1], "description": r[2], "category": r[3], "sort": r[4], "active": bool(r[5]), "def": apply_equipment_lists(json.loads(r[6]))}
 
 def get_ex(eid):
     r = db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE id=?", (eid,)).fetchone()
@@ -418,6 +438,39 @@ def migrate_clean_jerk():
     db.execute("COMMIT")
 migrate_clean_jerk()
 
+def migrate_clean_jerk_equipment():
+    """Add the shared equipment list to Clean and Jerk only. Old landmine entries keep their row and gain equipment=Landmine."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_cj_equip_v1'").fetchone(): return
+    if (db.execute("SELECT v FROM meta WHERE k='mig_clean_jerk_v1'").fetchone() or ["1"])[0] == "collision":
+        db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','skipped')"); return
+    src = next((x for x in CATALOG["exercises"] if x["name"] == CLEAN_JERK_NAME), None)
+    if not src: db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','skipped')"); return
+    wanted = apply_equipment_lists({"selectors": src.get("selectors") or []})["selectors"]
+    equip = next((x for x in wanted if x.get("key") == "equipment"), None)
+    if not equip: db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','skipped')"); return
+    old_norms = {norm(n) for n in CLEAN_JERK_OLD}
+    db.execute("BEGIN")
+    for eid, name, dj in db.execute("SELECT id, name, def FROM exercises").fetchall():
+        if norm(name) != norm(CLEAN_JERK_NAME) and norm(name) not in old_norms: continue
+        d = json.loads(dj)
+        sels = list(d.get("selectors") or [])
+        if any(x.get("key") == "equipment" for x in sels):
+            sels = [equip if x.get("key") == "equipment" else x for x in sels]
+        else:
+            sels = [equip] + sels
+        d["selectors"] = sels
+        if d.get("primary") and src.get("primary", {}).get("label"): d["primary"]["label"] = src["primary"]["label"]
+        db.execute("UPDATE exercises SET def=? WHERE id=?", (json.dumps(apply_equipment_lists(d)), eid))
+        for rid, sj in db.execute("SELECT id, selectors FROM results WHERE exercise_id=?", (eid,)).fetchall():
+            try: sel = json.loads(sj or "{}")
+            except Exception: sel = {}
+            if not sel.get("equipment"):
+                sel["equipment"] = "Landmine"
+                db.execute("UPDATE results SET selectors=? WHERE id=?", (json.dumps(sel), rid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','1')")
+    db.execute("COMMIT")
+migrate_clean_jerk_equipment()
+
 def fmt_time(sec):
     sec = int(round(sec)); h, m, x = sec // 3600, sec % 3600 // 60, sec % 60
     return f"{h}:{m:02d}:{x:02d}" if h else f"{m}:{x:02d}"
@@ -595,6 +648,8 @@ def run_import(uid, b, confirm):
         sel = {}; err = None
         for x in d["selectors"]:
             raw = g("equipment") if x["key"] == "equipment" else g("damper") if x["key"] == "damper" else g("side")
+            if not raw and x["key"] == "equipment" and norm(g("ex")) in {norm(n) for n in CLEAN_JERK_OLD}:
+                raw = "Landmine"
             if not raw:
                 if x["required"]: err = f"Please add: {x['label']} ({' / '.join(x['options'])})."; break
                 continue

@@ -1,4 +1,7 @@
 {
+ "equipmentLists": {
+  "free_weight": ["Barbell", "Landmine", "Dumbbell", "Kettlebell"]
+ },
  "exercises": [
   {
    "name": "Grip Strength",
@@ -518,12 +521,19 @@
    "category": "Power & Jumps",
    "primary": {
     "type": "weight",
-    "label": "Total weight, barbell plus plates (pounds)",
+    "label": "Total weight (pounds)",
     "unit": "lb",
     "better": "higher"
    },
    "secondary": null,
    "selectors": [
+    {
+     "key": "equipment",
+     "label": "Which equipment?",
+     "list": "free_weight",
+     "required": true,
+     "series": true
+    },
     {
      "key": "hand",
      "label": "Which hand?",
