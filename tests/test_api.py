@@ -44,6 +44,14 @@ try:
     # --- library
     s, lib, _ = call("/api/exercises", cookie=ckA); ex = {e["name"]: e for e in lib["exercises"]}
     check("35 exercises seeded", len(lib["exercises"]) == 35, len(lib["exercises"]))
+    jerk_names = [n for n in ex if "jerk" in n.casefold()]
+    check("landmine clean and jerk renamed, no second exercise", jerk_names == ["Clean and Jerk"] and "Barbell Landmine Split Switch Clean & Jerk" not in ex, jerk_names)
+    cjx = ex["Clean and Jerk"]
+    eq = next(x for x in cjx["def"]["selectors"] if x["key"] == "equipment")
+    check("clean and jerk uses the shared equipment list", eq["options"] == ["Barbell", "Landmine", "Dumbbell", "Kettlebell"] and eq["required"] is True and eq["series"] is True and eq.get("list") == "free_weight")
+    check("shared equipment list is only on clean and jerk", [n for n, e in ex.items() if any(x.get("list") == "free_weight" or "Landmine" in x.get("options", []) for x in e["def"]["selectors"])] == ["Clean and Jerk"])
+    s, j, _ = call("/api/results", {"exercise_id": cjx["id"], "primary": 95, "selectors": {"hand": "Right Hand"}, "day": "2026-06-02"}, ckA)
+    check("clean and jerk equipment required", s == 400 and "equipment" in j["error"].lower(), j)
     check("7 categories", len(lib["categories"]) == 7, lib["categories"])
     # --- track/untrack
     s, j, _ = call("/api/track", {"ids": [ex["Grip Strength"]["id"], ex["Gymnazo Mile"]["id"], 99999]}, ckA); check("picker saves valid ids only", j["tracked"] == sorted([ex["Grip Strength"]["id"], ex["Gymnazo Mile"]["id"]]))
@@ -70,6 +78,17 @@ try:
     j = log(g, 60, "2026-03-11", {"hand": "Left Hand"}); check("PB is per series (left hand first result not PB)", not j["pb"])
     s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
     check("series split by hand", {x["label"] for x in m["series"]} == {"Right Hand", "Left Hand"})
+    s, j, _ = call("/api/results", {"exercise_id": cjx["id"], "primary": 95, "selectors": {"hand": "Right Hand", "equipment": "Landmine"}, "day": "2026-06-02"}, ckA)
+    check("clean and jerk landmine log", s == 200)
+    s, j, _ = call("/api/results", {"exercise_id": cjx["id"], "primary": 40, "selectors": {"hand": "Right Hand", "equipment": "Dumbbell"}, "day": "2026-06-03"}, ckA)
+    check("clean and jerk dumbbell log", s == 200)
+    s, cjm, _ = call(f"/api/metric?exercise_id={cjx['id']}", cookie=ckA)
+    by = {x["label"]: x for x in cjm["series"]}
+    check("bests are separate per equipment", set(by) == {"Landmine · Right Hand", "Dumbbell · Right Hand"} and by["Landmine · Right Hand"]["best"]["value"] == 95 and by["Dumbbell · Right Hand"]["best"]["value"] == 40, by)
+    aid = [x["id"] for x in call("/api/admin/members", {}, admin="testpw")[1]["members"] if x["name"] == "Alice"][0]
+    s, pr, _ = call("/api/admin/members/progress", {"id": aid}, admin="testpw")
+    cm = next(x for x in pr["metrics"] if x["name"] == "Clean and Jerk")
+    check("admin history shows equipment", s == 200 and {r["sel"].get("equipment") for r in cm["results"]} == {"Landmine", "Dumbbell"} and {x["label"] for x in cm["series"]} == {"Landmine · Right Hand", "Dumbbell · Right Hand"})
     rh = [x for x in m["series"] if x["label"] == "Right Hand"][0]; check("series best/first/latest", rh["best"]["value"] == 90 and rh["first"]["value"] == 80 and rh["latest"]["value"] == 90 and rh["trend"] == "up")
     # lower is better (time)
     j = log(mile, 600, "2026-01-05"); j = log(mile, 540, "2026-04-05"); check("lower-better: faster is PB", j["pb"])
@@ -97,6 +116,10 @@ try:
     s, j, _ = call("/api/results", {"exercise_id": sa, "primary": 35, "secondary": 8, "selectors": {"hand": "Left Hand", "equipment": "PowerBlock"}, "day": "2026-06-02"}, ckA); check("SAOP log ok", s == 200)
     s, m, _ = call(f"/api/metric?exercise_id={sa}", cookie=ckA); check("SAOP reps + equipment stored", any(r["s"] == 8 and r["sel"].get("equipment") == "PowerBlock" for r in m["results"]), m)
     s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Second result,Side / Hand / Foot,Equipment\n2025-01-01,Kettlebell Single Arm Overhead Press,30,6,Right Hand,Kettlebell"}, ckA); check("CSV with old KB name still maps to renamed activity", s == 200 and j["counts"]["ok"] == 1, j)
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Side / Hand / Foot\n2025-02-02,Barbell Landmine Split Switch Clean & Jerk,45,Right Hand\n2025-02-03,landmine clean and jerk,50,Left Hand"}, ckA)
+    check("old clean and jerk names map to Clean and Jerk with Landmine", s == 200 and j["counts"]["ok"] == 2 and {r["exercise"] for r in j["rows"]} == {"Clean and Jerk"} and all(r["sel"].get("equipment") == "Landmine" for r in j["rows"]), j)
+    s, j, _ = call("/api/import/preview", {"text": "Date,Exercise,Result,Side / Hand / Foot\n2025-02-04,Clean and Jerk,55,Right Hand"}, ckA)
+    check("new clean and jerk name still asks for equipment", s == 200 and j["counts"]["problem"] == 1 and "equipment" in j["rows"][0]["error"].lower(), j)
     sn = ex["Single Arm Snatch"]["id"]; check("old KB snatch name gone", "Kettlebell Single Arm Snatch" not in ex)
     s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "secondary": 5, "selectors": {"hand": "Right Hand"}, "day": "2026-06-02"}, ckA); check("snatch equipment required", s == 400)
     s, j, _ = call("/api/results", {"exercise_id": sn, "primary": 26, "selectors": {"hand": "Right Hand", "equipment": "FitFighter"}, "day": "2026-06-02"}, ckA); check("snatch reps required", s == 400)
@@ -285,17 +308,109 @@ try:
     blob = json.dumps([call("/api/admin/stats", {}, admin="testpw")[1], call("/api/admin/list", {}, admin="testpw")[1], mem])
     check("admin views never contain member notes", "Feeling stronger" not in blob and "New note" not in blob and "admin loaded" not in blob)
     s, j, _ = call("/api/admin/import-confirm", {"user_id": 99999, "text": "x"}, admin="testpw"); check("admin import unknown member 404", s == 404)
+    # one member's progress (admin only; never PINs or hashes)
+    cid = [x["id"] for x in mem["members"] if x["name"] == "Carol"][0]
+    check("progress needs admin password", call("/api/admin/members/progress", {"id": cid})[0] == 401 and call("/api/admin/members/export", {"id": cid})[0] == 401)
+    check("progress wrong password rejected", call("/api/admin/members/progress", {"id": cid}, admin="nope")[0] == 401 and call("/api/admin/members/export", {"id": cid}, admin="nope")[0] == 401)
+    check("member session is not admin", call("/api/admin/members/progress", {"id": cid}, cookie=ckC)[0] == 401 and call("/api/admin/members/progress", {"id": did}, cookie=ckD)[0] == 401)
+    check("GET progress does not return member data", call("/api/admin/members/progress?id=%s" % cid, cookie=ckC, admin="testpw")[0] == 404)
+    check("progress needs a member id", call("/api/admin/members/progress", {}, admin="testpw")[0] == 400 and call("/api/admin/members/export", {}, admin="testpw")[0] == 400)
+    check("progress unknown member 404", call("/api/admin/members/progress", {"id": 99999}, admin="testpw")[0] == 404 and call("/api/admin/members/export", {"id": 99999}, admin="testpw")[0] == 404)
+    call("/api/track/toggle", {"exercise_id": gx("Gymnazo Mile"), "tracked": False}, ckC)
+    s, pr, _ = call("/api/admin/members/progress", {"id": cid}, admin="testpw")
+    def walk_keys(o, acc=None):
+        acc = set() if acc is None else acc
+        if isinstance(o, dict):
+            acc.update(o.keys())
+            for v in o.values(): walk_keys(v, acc)
+        elif isinstance(o, list):
+            for v in o: walk_keys(v, acc)
+        return acc
+    secret_keys = {"salt", "pin", "pin_hash", "password", "token", "token_hash", "secret", "fails", "locked_until", "name_key"}
+    creds = sqlite3.connect(DBP).execute("select salt, pin_hash from users where name='Carol'").fetchone()
+    blob = json.dumps(pr)
+    grip = next(m for m in pr["metrics"] if m["name"] == "Grip Strength")
+    rh = next(x for x in grip["series"] if x["label"] == "Right Hand")
+    mile_m = next(m for m in pr["metrics"] if m["name"] == "Gymnazo Mile")
+    check("admin progress returns Carol", s == 200 and pr["member"] == {"id": cid, "name": "Carol"} and set(pr) == {"member", "metrics", "badges", "badgeCount", "badgeTotal"})
+    check("progress history, best, and note", rh["best"]["value"] == 66 and rh["first"]["value"] == 60 and any(r["note"] == "Feeling stronger" for r in grip["results"]) and grip["tracked"] is True, grip)
+    check("untracked metric history still shown", mile_m["tracked"] is False and mile_m["better"] == "lower" and mile_m["series"][0]["best"]["value"] == 540)
+    check("tracked metrics listed before untracked", pr["metrics"].index(grip) < pr["metrics"].index(mile_m))
+    check("earned badges included", pr["badgeCount"] == len(pr["badges"]) >= 1 and any(b["code"] == "first_result" and b["title"] and b["earned"] for b in pr["badges"]))
+    check("progress hides pins and secrets", secret_keys.isdisjoint(walk_keys(pr)) and all(c and c not in blob for c in creds), sorted(secret_keys & walk_keys(pr)))
+    s, dave, _ = call("/api/admin/members/progress", {"id": did}, admin="testpw")
+    check("progress is only that member", s == 200 and dave["member"]["name"] == "Dave" and any(m["name"] == "Gymnazo Loop" and any(r["day"] == "2024-05-05" and r["note"] == "admin loaded" for r in m["results"]) for m in dave["metrics"]) and "Feeling stronger" not in json.dumps(dave))
+    s, j, ckE = call("/api/register", {"name": "Eve", "pin": "3333"})
+    eve = [x["id"] for x in call("/api/admin/members", {}, admin="testpw")[1]["members"] if x["name"] == "Eve"][0]
+    s, empty, _ = call("/api/admin/members/progress", {"id": eve}, admin="testpw")
+    check("member with no results", s == 200 and empty["metrics"] == [] and empty["badges"] == [] and empty["badgeCount"] == 0)
+    call("/api/account/delete", {"pin": "3333"}, ckE)
+    def raw_post(path, body, admin=None):
+        c = http.client.HTTPConnection("127.0.0.1", PORT); h = {"Content-Type": "application/json"}
+        if admin is not None: h["X-Admin-Password"] = admin
+        c.request("POST", path, json.dumps(body), h); r = c.getresponse(); data = r.read()
+        return r.status, data, r.getheader("Content-Type"), r.getheader("Content-Disposition")
+    st, data, ctype, disp = raw_post("/api/admin/members/export", {"id": cid}, "testpw")
+    text = data.decode("utf-8-sig")
+    check("admin csv download", st == 200 and "text/csv" in (ctype or "") and "Feeling stronger" in text and text.splitlines()[0].startswith("Date,Exercise,Result") and 'filename="Carol-gymnazo-results.csv"' in (disp or ""), (st, ctype, disp, text.splitlines()[0]))
+    check("admin csv hides secrets", all(c and c not in text for c in creds))
+    st, data, ctype, _ = raw_post("/api/admin/members/export", {"id": cid})
+    check("admin csv refuses missing password", st == 401 and "text/csv" not in (ctype or "") and b"Feeling stronger" not in data)
+    page = call("/admin")[1]; page = page.decode("utf-8") if isinstance(page, bytes) else str(page)
+    check("admin page offers view progress", "View progress" in page and "/api/admin/members/progress" in page and "/api/admin/members/export" in page)
     call("/api/account/delete", {"pin": "1111"}, ckC); call("/api/account/delete", {"pin": "2222"}, ckD)
     # --- migration/seed idempotent: restart doesn't duplicate
     srv.terminate(); srv.wait(); srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "server.py")], env=env); time.sleep(1.2)
     s, al, _ = call("/api/admin/list", {}, admin="testpw"); check("restart keeps data, no re-seed", len(al["exercises"]) == 37)
+    # --- pounds / kilograms (stored as pounds; kg is input only) and metric requests
+    KG = 0.45359237
+    kept = sqlite3.connect(DBP).execute("select pval from results where user_id=(select id from users where name='Alice') order by id limit 1").fetchone()[0]
+    s, me0, _ = call("/api/me", cookie=ckA); check("default weight unit is pounds", me0.get("weightUnit") == "lb" and me0.get("weightUnits") == {})
+    s, j, _ = call("/api/prefs/weight", {"unit": "kg"}, ckA); check("account unit kilograms", s == 200 and j["weightUnit"] == "kg")
+    s, j, _ = call("/api/prefs/weight", {"unit": "lb", "exercise_id": g}, ckA); check("per-metric unit override", s == 200 and j["weightUnit"] == "kg" and j["weightUnits"].get(str(g)) == "lb")
+    check("weight pref needs login", call("/api/prefs/weight", {"unit": "kg"})[0] == 401)
+    check("weight pref rejects other units", call("/api/prefs/weight", {"unit": "stone"}, ckA)[0] == 400)
+    same = sqlite3.connect(DBP).execute("select pval from results where user_id=(select id from users where name='Alice') order by id limit 1").fetchone()[0]
+    check("existing stored pounds are unchanged", kept == same)
+    s, j, _ = call("/api/results", {"exercise_id": g, "primary": 101, "selectors": {"hand": "Right Hand"}, "day": "2026-10-02"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
+    check("omitted unit is stored as pounds", s == 200 and any(r["day"] == "2026-10-02" and r["p"] == 101 for r in m["results"]))
+    s, j, _ = call("/api/results", {"exercise_id": g, "primary": 40, "selectors": {"hand": "Left Hand"}, "day": "2026-10-02", "weight_unit": "kg"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
+    kgrow = [r for r in m["results"] if r["day"] == "2026-10-02" and r["sel"].get("hand") == "Left Hand"][0]
+    check("kilograms stored once as pounds", s == 200 and abs(kgrow["p"] - round(40 / KG, 4)) < 1e-6 and kgrow["p"] != 40, kgrow["p"])
+    check("kilograms round-trip for display", abs(round(kgrow["p"] * KG, 2) - 40) < 0.001)
+    check("bad weight unit rejected", call("/api/results", {"exercise_id": g, "primary": 10, "selectors": {"hand": "Right Hand"}, "weight_unit": "stone"}, ckA)[0] == 400)
+    s, j, _ = call("/api/results", {"exercise_id": ex["Single Leg Balance"]["id"], "primary": 40, "secondary": 10, "selectors": {"side": "Left Leg"}, "day": "2026-10-04", "weight_unit": "kg"}, ckA)
+    s, bal, _ = call(f"/api/metric?exercise_id={ex['Single Leg Balance']['id']}", cookie=ckA)
+    brow = [r for r in bal["results"] if r["day"] == "2026-10-04"][-1]
+    check("only weight fields convert", brow["p"] == 40 and abs(brow["s"] - round(10 / KG, 4)) < 1e-6, brow)
+    s, j, _ = call("/api/results/update", {"id": kgrow["id"], "primary": 41, "selectors": {"hand": "Left Hand"}, "day": "2026-10-02", "weight_unit": "kg"}, ckA)
+    s, m, _ = call(f"/api/metric?exercise_id={g}", cookie=ckA)
+    edited = [r for r in m["results"] if r["id"] == kgrow["id"]][0]
+    check("edit in kilograms stores pounds", s == 200 and abs(edited["p"] - round(41 / KG, 4)) < 1e-6, edited["p"])
+    check("metric request needs login", call("/api/metric-requests", {"name": "Farmer carry", "details": "Distance walked"})[0] == 401)
+    s, j, _ = call("/api/metric-requests", {"name": "Farmer carry <b>walk</b>", "details": "How far you walk while carrying weights", "unit": "kg"}, ckA)
+    check("metric request saved", s == 200 and j.get("ok") is True and isinstance(j.get("id"), int) and set(j) == {"ok", "id"})
+    check("metric request needs how to measure", call("/api/metric-requests", {"name": "Nope"}, ckA)[0] == 400)
+    check("admin requests need password", call("/api/admin/metric-requests", {}, method="POST")[0] == 401 and call("/api/admin/metric-requests", {}, cookie=ckA)[0] == 401)
+    s, j, _ = call("/api/admin/metric-requests", {}, admin="testpw")
+    req = [r for r in j["requests"] if r["member"] == "Alice" and "Farmer carry" in r["name"]][0]
+    check("admin lists the request", s == 200 and req["status"] == "new" and req["unit"] == "kg" and "<" not in req["name"] and req["details"].startswith("How far") and set(req) == {"id", "member", "name", "details", "unit", "status", "created"})
+    s, j, _ = call("/api/admin/metric-requests/status", {"id": req["id"], "status": "reviewed"}, admin="testpw")
+    s, again, _ = call("/api/admin/metric-requests", {}, admin="testpw")
+    check("admin can mark reviewed", s == 200 and [r for r in again["requests"] if r["id"] == req["id"]][0]["status"] == "reviewed")
+    check("admin rejects other statuses", call("/api/admin/metric-requests/status", {"id": req["id"], "status": "approved"}, admin="testpw")[0] == 400)
+    home = call("/")[1]; home = home.decode("utf-8") if isinstance(home, bytes) else str(home)
+    adm = call("/admin")[1]; adm = adm.decode("utf-8") if isinstance(adm, bytes) else str(adm)
+    check("pages offer units and requests", "Kilograms" in home and "Request a metric" in home and "Metric requests" in adm and "lb (" in adm)
     # --- account deletion
     s, j, _ = call("/api/account/delete", {"pin": "0000"}, ckB); check("delete account wrong pin refused", s == 401)
     s, j, _ = call("/api/account/delete", {"pin": "4321"}, ckB); check("delete account ok", s == 200)
     check("deleted session invalid", call("/api/me", cookie=ckB)[0] == 401)
     s, j, _ = call("/api/login", {"name": "Bob", "pin": "4321"}); check("deleted user cannot log in", s == 401)
     s, j, _ = call("/api/account/delete", {"pin": "1234"}, ckA); 
-    c = sqlite3.connect(DBP); check("all Alice data removed", all(c.execute(f"select count(*) from {t}").fetchone()[0] == 0 for t in ("users", "results", "tracked", "badges", "sessions")))
+    c = sqlite3.connect(DBP); check("all Alice data removed", all(c.execute(f"select count(*) from {t}").fetchone()[0] == 0 for t in ("users", "results", "tracked", "badges", "sessions", "unit_pref", "metric_requests")))
     # xss: note stored stripped, notes are only rendered escaped client-side
 finally:
     srv.terminate()

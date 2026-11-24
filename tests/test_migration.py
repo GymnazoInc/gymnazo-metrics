@@ -14,7 +14,10 @@ c.execute("INSERT INTO results(user_id,exercise_id,day,pval,selectors,created) V
 sid = c.execute("SELECT id FROM exercises WHERE name='Kettlebell Single Arm Snatch'").fetchone()[0]
 c.execute("INSERT INTO results(user_id,exercise_id,day,pval,selectors,created) VALUES(1,?,'2026-01-02',26,?,0)", (sid, json.dumps({"hand": "Left Hand"})))
 spid = c.execute("SELECT id FROM exercises WHERE name='Sled Push 20yd'").fetchone()[0]
-c.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,selectors,created) VALUES(1,?,'2026-01-03',150,40,'{}',0)", (spid,)); c.commit(); c.close()
+c.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,selectors,created) VALUES(1,?,'2026-01-03',150,40,'{}',0)", (spid,))
+cj = c.execute("SELECT id FROM exercises WHERE name='Barbell Landmine Split Switch Clean & Jerk'").fetchone()[0]
+c.execute("INSERT INTO results(user_id,exercise_id,day,pval,selectors,created) VALUES(1,?,'2026-01-04',95,?,0)", (cj, json.dumps({"hand": "Right Hand"})))
+c.commit(); c.close()
 code = "import sys; sys.argv=['x']; import server"
 env = dict(os.environ, DB_PATH=DBP, ADMIN_PASSWORD="x", PORT="18099", HOST="127.0.0.1")
 for _ in range(2):  # run twice: idempotent
@@ -43,4 +46,11 @@ check("loop + mile descriptions", [r[0] for r in c.execute("SELECT description F
 zd = json.loads(c.execute("SELECT def FROM exercises WHERE name='Zercher Squat'").fetchone()[0])
 check("zercher reps added, equipment kept", zd["secondary"]["type"] == "reps" and zd["secondary"]["optional"] is False and zd["selectors"][0]["key"] == "equipment")
 check("exercise count unchanged", c.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == len(old["exercises"]))
+check("clean and jerk renamed in place", c.execute("SELECT name FROM exercises WHERE id=?", (cj,)).fetchone()[0] == "Clean and Jerk")
+cj_row = c.execute("SELECT exercise_id,pval,selectors FROM results WHERE exercise_id=?", (cj,)).fetchone()
+check("clean and jerk result still on the same exercise, equipment Landmine", cj_row[0] == cj and cj_row[1] == 95 and json.loads(cj_row[2]) == {"hand": "Right Hand", "equipment": "Landmine"})
+cj_def = json.loads(c.execute("SELECT def FROM exercises WHERE id=?", (cj,)).fetchone()[0])
+check("clean and jerk gained the equipment choice", [x["key"] for x in cj_def["selectors"]][0] == "equipment" and next(x for x in cj_def["selectors"] if x["key"] == "equipment")["options"] == ["Barbell", "Landmine", "Dumbbell", "Kettlebell"])
+check("landmine snatch name unchanged", c.execute("SELECT name FROM exercises WHERE name='Barbell Landmine Split Switch Snatch'").fetchone()[0] == "Barbell Landmine Split Switch Snatch")
+check("no second clean and jerk row", c.execute("SELECT COUNT(*) FROM exercises WHERE lower(replace(name,'&','and')) LIKE '%clean and jerk%'").fetchone()[0] == 1)
 sys.exit(1 if F else 0)

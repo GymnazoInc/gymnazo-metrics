@@ -1,17 +1,20 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Metrics admin · Gymnazo</title>
-<!-- admin-marker: gymnazo-metrics-admin-v2 import-v1 members-v1 -->
+<!-- admin-marker: gymnazo-metrics-admin-v2 import-v1 members-v2 progress-v1 -->
 <style>
 body{font-family:system-ui,'Avenir Next',sans-serif;font-size:18px;background:#faf8f5;color:#2b2d33;margin:0}.w{max-width:760px;margin:0 auto;padding:14px}
 .top{background:#d4631c;color:#fff;padding:12px 16px;font-weight:700}
 .c{background:#fff;border:1px solid #e6e1da;border-radius:16px;padding:14px;margin:12px 0}h2{margin:.2em 0}
 button{font:inherit;font-weight:700;background:#d4631c;color:#fff;border:0;border-radius:12px;padding:12px 16px;min-height:52px;cursor:pointer;margin:4px 4px 4px 0}button.g{background:#fff;color:#2b2d33;border:2px solid #cfc8bd}button.r{background:#fff;color:#b3261e;border:2px solid #b3261e}
 input,select,textarea{font:inherit;width:100%;padding:10px;min-height:48px;border:2px solid #c9c2b8;border-radius:10px;margin:4px 0 8px;background:#fff}label{font-weight:700;display:block}
-.s{color:#5b5e68;font-size:16px}.row{display:flex;gap:10px}.row>*{flex:1}.hide{display:none}.er{color:#b3261e;font-weight:700}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:6px;border-bottom:1px solid #eee}
+.s{color:#5b5e68;font-size:16px}.row{display:flex;gap:10px}.row>*{flex:1}.hide{display:none}.er{color:#b3261e;font-weight:700}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:6px;border-bottom:1px solid #eee;vertical-align:top}
+.tw{overflow-x:auto}.met table{min-width:560px}.nowrap{white-space:nowrap}
 .ex{display:flex;gap:8px;align-items:center;border-bottom:1px solid #eee;padding:8px 0}.ex .t{flex:1}
+.bdg{display:flex;flex-wrap:wrap;gap:8px}.bd{display:flex;gap:8px;align-items:flex-start;border:1px solid #e6e1da;border-radius:12px;padding:8px 10px;background:#faf8f5;flex:1 1 220px}.bi{font-size:22px;line-height:1.2}
+.met{border-top:1px solid #eee;margin-top:14px;padding-top:8px}.star{color:#d4631c;font-weight:700}
 </style></head><body><div class="top">Gymnazo Metrics · Admin</div><div class="w">
 <div class="c" id="lg"><h2>Admin password</h2><input id="pw" type="password" placeholder="Password"><button id="in">Open admin</button><div class="er" id="le"></div></div>
 <div id="ad" class="hide">
-<div class="c"><h2>Numbers <span class="s">(counts only, never individual scores)</span></h2><div id="st"></div></div>
+<div class="c"><h2>Numbers <span class="s">(counts only)</span></h2><div id="st"></div></div>
 <div class="c"><h2>Exercise library</h2><button id="new">+ Add an exercise</button> <span class="s">Tap an exercise to edit. Hidden exercises disappear for members but their saved results are kept.</span><div id="lst"></div></div>
 <div class="c hide" id="fm"><h2 id="ft">Exercise</h2>
 <label>Name</label><input id="n"><label>Description</label><textarea id="d" rows="3"></textarea>
@@ -25,10 +28,13 @@ input,select,textarea{font:inherit;width:100%;padding:10px;min-height:48px;borde
 <label>Chart and personal best use</label><select id="hd"><option value="primary">Main measure</option><option value="secondary">Second measure</option></select></div>
 <h3>Choices (side, equipment, damper…)</h3><div class="s">One per line: key | question | option1, option2 | required yes/no | separate-chart yes/no</div><textarea id="sel" rows="4"></textarea>
 <div class="er" id="fe"></div><button id="sv">Save</button><button class="g" id="cx">Cancel</button></div>
-<div class="c"><h2>Members (names only)</h2><div class="s">Reset a forgotten PIN, or remove a member and all their data. A reset also applies on the Winter Solstice app if they have an account there. No scores or notes are shown here.</div>
-<label>Member</label><select id="mm_u"></select><label>New 4-digit PIN</label><input id="mm_p" inputmode="numeric" maxlength="4" placeholder="1234"><button id="mm_r">Reset PIN</button><button id="mm_d" class="r">Remove member…</button><div id="mm_o" class="s"></div></div>
+<div class="c" id="mm_box"><h2>Members</h2><div class="s">Open View progress to review one member's tracked metrics, every saved result, bests, and badges. Reset a forgotten PIN, or remove a member and all their data. A reset also applies on the Winter Solstice app if they have an account there.</div>
+<div id="mm_list"></div>
+<label>Reset or remove</label><select id="mm_u"></select><label>New 4-digit PIN</label><input id="mm_p" inputmode="numeric" maxlength="4" placeholder="4 digits"><button id="mm_r">Reset PIN</button><button id="mm_d" class="r">Remove member…</button><div id="mm_o" class="s"></div></div>
+<div class="c hide" id="mp"><button class="g" id="mp_back">← All members</button><h2 id="mp_title">Progress</h2><div id="mp_msg" class="er"></div><div id="mp_body"></div></div>
 <div class="c"><h2>Import past results for a member</h2><div class="s">Choose the member, then paste or upload their CSV (columns: Date, Exercise, Result, Second result, Side / Hand / Foot, Equipment, Damper, Note). You see a preview first. Nothing is saved until you confirm. Existing results and notes are never shown here.</div>
 <label>Member</label><select id="im_u"></select><input type="file" id="im_f" accept=".csv,.txt"><textarea id="im_t" rows="6" placeholder="Date,Exercise,Result,..."></textarea><button id="im_p">Preview</button><div id="im_o"></div></div>
+<div class="c" id="rq_box"><h2>Metric requests</h2><div class="s">Members can ask for a metric that is not in the library. Nothing is emailed. Mark a request reviewed once you have looked at it.</div><div id="rq"></div></div>
 <div class="c"><h2>Bulk import</h2><div class="s">Paste JSON like the file exercises.json: {"exercises":[{"name","description","category","primary":{"type","label","unit","better"},"secondary":null,"selectors":[]}]}. Names that already exist are skipped.</div><textarea id="bk" rows="8" placeholder='{"exercises":[...]}'></textarea><button id="pv">Preview</button><button id="im" class="g">Import</button><div id="bo" class="s"></div></div>
 </div></div>
 <script>
@@ -36,7 +42,7 @@ const $=id=>document.getElementById(id);let PW='',EX=[],EID=null;const TY=['time
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function A(p,b){const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':PW},body:JSON.stringify(b||{})});let j={};try{j=await r.json()}catch(e){}return {ok:r.ok,j}}
 ['pt','st2'].forEach(i=>$(i).innerHTML=TY.map(t=>`<option>${t}</option>`).join(''));
-$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load();loadMem()};
+$('in').onclick=async()=>{PW=$('pw').value;const {ok,j}=await A('/api/admin/stats');if(!ok){$('le').textContent=j.error||'Wrong password';return}$('lg').classList.add('hide');$('ad').classList.remove('hide');stats(j);load();loadMem();loadReq()};
 function stats(j){$('st').innerHTML=`<table><tr><td>Members</td><td><b>${j.members}</b></td></tr><tr><td>Results logged</td><td><b>${j.results}</b></td></tr><tr><td>Badges earned</td><td><b>${j.badgesAwarded}</b></td></tr><tr><td>Active exercises</td><td><b>${j.exercises}</b></td></tr></table><h3>Most tracked</h3><table><tr><th>Exercise</th><th>Members tracking</th><th>Results</th></tr>${j.popular.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.trackers}</td><td>${p.results}</td></tr>`).join('')}</table>`}
 async function load(){const {j}=await A('/api/admin/list');EX=j.exercises||[];$('cats').innerHTML=[...new Set(EX.map(e=>e.category))].map(c=>`<option value="${esc(c)}">`).join('');
  $('lst').innerHTML=EX.map((e,i)=>`<div class="ex"><div class="t"><b>${esc(e.name)}</b> ${e.active?'':'<span class="er">(hidden)</span>'}<div class="s">${esc(e.category)} · ${esc(e.def.primary.type)} (${esc(e.def.primary.unit)}, ${e.def.primary.better} is better)${e.def.secondary?' + '+esc(e.def.secondary.type):''}${e.def.third?' + '+esc(e.def.third.label)+(e.def.third.optional?' (optional)':''):''}${e.def.selectors.length?' · choices: '+e.def.selectors.map(x=>esc(x.key)).join(', '):''}</div></div><button class="g" data-e="${e.id}">Edit</button><button class="g" data-u="${i}" aria-label="Move up">↑</button></div>`).join('');
@@ -48,7 +54,7 @@ function edit(id){const e=id?EX.find(x=>x.id===id):{name:'',description:'',categ
  const s=d.secondary;$('se').checked=!!s;$('sb').classList.toggle('hide',!s);if(s){$('st2').value=s.type;$('su').value=s.unit;$('sbt').value=s.better||'higher';$('sl').value=s.label;$('so').checked=s.optional!==false}$('hd').value=d.headline||'primary';
  $('sel').value=d.selectors.map(x=>[x.key,x.label,x.options.join(', '),x.required?'yes':'no',x.series?'yes':'no'].join(' | ')).join('\n');$('fe').textContent='';$('fm').classList.remove('hide');$('fm').scrollIntoView()}
 $('new').onclick=()=>edit(0);$('cx').onclick=()=>$('fm').classList.add('hide');$('se').onchange=()=>$('sb').classList.toggle('hide',!$('se').checked);
-$('sv').onclick=async()=>{const sels=$('sel').value.split('\n').filter(l=>l.trim()).map(l=>{const p=l.split('|').map(x=>x.trim());return {key:p[0],label:p[1],options:(p[2]||'').split(',').map(x=>x.trim()).filter(Boolean),required:(p[3]||'yes').toLowerCase()!=='no',series:(p[4]||'yes').toLowerCase()!=='no'}});
+$('sv').onclick=async()=>{const prevSels=(EID&&(EX.find(x=>x.id===EID)||{}).def||{}).selectors||[];const sels=$('sel').value.split('\n').filter(l=>l.trim()).map(l=>{const p=l.split('|').map(x=>x.trim());const sel={key:p[0],label:p[1],options:(p[2]||'').split(',').map(x=>x.trim()).filter(Boolean),required:(p[3]||'yes').toLowerCase()!=='no',series:(p[4]||'yes').toLowerCase()!=='no'};const prev=prevSels.find(s=>s.key===sel.key);if(prev&&prev.list&&(prev.options||[]).join('|')===sel.options.join('|'))sel.list=prev.list;return sel});
  const def={primary:{type:$('pt').value,unit:$('pu').value,better:$('pb').value,label:$('pl').value},secondary:$('se').checked?{type:$('st2').value,unit:$('su').value,better:$('sbt').value,label:$('sl').value,optional:$('so').checked}:null,third:(EID&&(EX.find(x=>x.id===EID)||{}).def||{}).third||null,selectors:sels,headline:$('se').checked?$('hd').value:'primary'};
  const {ok,j}=await A('/api/admin/save',{id:EID,name:$('n').value,description:$('d').value,category:$('cat').value,active:$('act').checked,def});if(!ok){$('fe').textContent=j.error||'Could not save';return}$('fm').classList.add('hide');load()};
 async function imp(dry){let t=$('bk').value;const {ok,j}=await A('/api/admin/import',{text:t,dry});$('bo').innerHTML=ok?`<b>${dry?'Preview':'Done'}:</b> ${j.added.length} ${dry?'would be added':'added'}, ${j.skipped.length} skipped (already exist)${j.bad.length?', '+j.bad.length+' problems: '+j.bad.map(b=>'item '+b.item+' ('+esc(b.error)+')').join('; '):''}`:`<span class="er">${esc(j.error||'Error')}</span>`;if(ok&&!dry)load()}
@@ -58,7 +64,52 @@ function mmSel(){const o=$('mm_u').selectedOptions[0];return o&&o.value?{id:+o.v
 $('mm_r').onclick=async()=>{const m=mmSel();if(!m){$('mm_o').textContent='Please choose a member.';return}const pin=$('mm_p').value;if(!/^\d{4}$/.test(pin)){$('mm_o').textContent='The PIN must be exactly 4 digits.';return}if(!confirm('Set '+m.name+"'s PIN to "+pin+'? They will be logged out here.'))return;const {ok,j}=await A('/api/admin/members/reset-pin',{id:m.id,pin});$('mm_o').innerHTML=ok?'Done. Tell '+esc(m.name)+' their new PIN.'+(j.federated?' It is also being applied on the Winter Solstice app.':''):'<span class="er">'+esc(j.error||'Error')+'</span>';$('mm_p').value=''};
 $('mm_d').onclick=async()=>{const m=mmSel();if(!m){$('mm_o').textContent='Please choose a member.';return}const t=prompt('This deletes '+m.name+' and all their results for good. Type their name to confirm:');if(t===null)return;const {ok,j}=await A('/api/admin/members/delete',{id:m.id,confirm:t});$('mm_o').innerHTML=ok?'Removed.':'<span class="er">'+esc(j.error||'Error')+'</span>';if(ok)loadMem()};
 let IMF={};
-async function loadMem(){const {j}=await A('/api/admin/members');const o='<option value="">Choose a member…</option>'+(j.members||[]).map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');$('im_u').innerHTML=o;$('mm_u').innerHTML=o}
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDay(d){const p=String(d||'').split('-');if(p.length<3||!MON[+p[1]-1])return String(d||'');return MON[+p[1]-1]+' '+(+p[2])+', '+p[0]}
+function fmtTime(sec){sec=Math.round(sec);const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),x=sec%60,p=n=>String(n).padStart(2,'0');return h?h+':'+p(m)+':'+p(x):m+':'+p(x)}
+function fmtNum(v){return String(Math.round(v*100)/100)}
+function fmtM(m,v){if(v==null||v==='')return '—';if(!m)return fmtNum(v);if(m.type==='time')return m.unit==='sec'&&v<60?Math.round(v)+' sec':fmtTime(v);if(m.type==='weight')return fmtNum(v)+' lb ('+fmtNum(v*0.45359237)+' kg)';return fmtNum(v)+(m.unit?' '+m.unit:'')}
+function hm(def){return def&&def.headline==='secondary'&&def.secondary?def.secondary:(def&&def.primary)||{type:'number',label:'Result',unit:''}}
+function resLine(d,r){return esc(fmtM(d.primary,r.p))+(d.secondary&&r.s!=null?' · '+esc(fmtM(d.secondary,r.s)):'')+(d.third&&r.t!=null?' · '+esc(fmtM(d.third,r.t)):'')}
+function selTxt(d,sel){return (d.selectors||[]).filter(x=>sel&&sel[x.key]).map(x=>sel[x.key]).join(' · ')}
+function trendTxt(t){return t==='up'?'Improving':t==='down'?'A little lower':t==='same'?'Steady':t==='new'?'First result':''}
+let FORM_OPEN=false;
+function showAdmin(progress){if(progress){FORM_OPEN=!$('fm').classList.contains('hide');Array.from($('ad').children).forEach(el=>el.classList.toggle('hide',el.id!=='mp'));$('mp').scrollIntoView();return}Array.from($('ad').children).forEach(el=>el.classList.toggle('hide',el.id==='mp'||(el.id==='fm'&&!FORM_OPEN)));$('mm_box').scrollIntoView()}
+async function loadMem(){const {j}=await A('/api/admin/members');const members=j.members||[];const o='<option value="">Choose a member…</option>'+members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');$('im_u').innerHTML=o;$('mm_u').innerHTML=o;
+ $('mm_list').innerHTML=members.length?members.map(m=>`<div class="ex"><div class="t"><b>${esc(m.name)}</b></div><button data-vp="${m.id}">View progress</button></div>`).join(''):'<div class="s">No members yet.</div>';
+ $('mm_list').querySelectorAll('[data-vp]').forEach(b=>b.onclick=()=>viewProgress(+b.dataset.vp))}
+async function viewProgress(id){$('mp_msg').textContent='';$('mp_title').textContent='Progress';$('mp_body').innerHTML='<p class="s">Loading…</p>';showAdmin(true);
+ const {ok,j}=await A('/api/admin/members/progress',{id});
+ if(!ok){$('mp_body').innerHTML='<p class="er">'+(esc(j.error||'Could not load this member.'))+'</p>';return}
+ const earned=j.badges||[],metrics=j.metrics||[],nRes=metrics.reduce((n,m)=>n+(m.results||[]).length,0);
+ $('mp_title').textContent=(j.member&&j.member.name?j.member.name:'Member')+"'s progress";
+ let h=`<p class="s">${metrics.filter(m=>m.tracked).length} tracked · ${nRes} result${nRes===1?'':'s'} · ${earned.length} badge${earned.length===1?'':'s'} earned</p><button class="g" id="mp_csv">Download CSV</button>`;
+ h+=`<h3>Badges</h3>`;
+ h+=earned.length?`<div class="bdg">`+earned.map(b=>`<div class="bd"><span class="bi">${esc(b.icon||'🏅')}</span><div><b>${esc(b.title)}</b><div class="s">${esc(b.desc||'')}</div></div></div>`).join('')+`</div>`:`<p class="s">No badges yet.</p>`;
+ h+=`<h3>Metrics</h3>`;
+ if(!metrics.length)h+=`<p class="s">This member is not tracking any metrics and has no saved results.</p>`;
+ metrics.forEach(m=>{const d=m.def||{},measure=hm(d),bestIds={};(m.series||[]).forEach(s=>{if(s.best&&s.best.id!=null)bestIds[s.best.id]=1});
+  const label=measure.label||measure.type||'Result';const hint=esc(label)+(measure.unit&&label.indexOf('(')<0?' ('+esc(measure.unit)+')':'')+' · '+(m.better==='lower'?'lower':'higher')+' is better';
+  h+=`<div class="met"><b>${esc(m.name)}</b> <span class="s">${esc(m.category||'')}${m.tracked?'':' · not currently tracking'}${m.active?'':' · hidden from members'}</span><div class="s">${hint}</div>`;
+  if(m.description)h+=`<div class="s">${esc(m.description)}</div>`;
+  if(m.series&&m.series.length){h+=`<div class="tw"><table><tr><th>Series</th><th>Best</th><th>Latest</th><th>First</th><th>Results</th></tr>`+m.series.map(s=>`<tr><td class="nowrap">${esc(s.label||'All')}</td><td class="nowrap"><b>${esc(fmtM(measure,s.best.value))}</b><div class="s">${esc(fmtDay(s.best.day))}</div></td><td class="nowrap">${esc(fmtM(measure,s.latest.value))}<div class="s">${esc(fmtDay(s.latest.day))}${s.trend?' · '+esc(trendTxt(s.trend)):''}</div></td><td class="nowrap">${esc(fmtM(measure,s.first.value))}<div class="s">${esc(fmtDay(s.first.day))}</div></td><td>${s.count}</td></tr>`).join('')+`</table></div>`}
+  else h+=`<p class="s">No results yet. The first one sets the baseline.</p>`;
+  if(m.results&&m.results.length){const rows=[...m.results].reverse();
+   h+=`<div class="tw"><table><tr><th>Date</th><th>Result</th><th>Choices</th><th>Note</th></tr>`+rows.map(r=>`<tr><td class="nowrap">${esc(fmtDay(r.day))}${bestIds[r.id]?' <span class="star">★ Best</span>':''}</td><td class="nowrap">${resLine(d,r)}</td><td>${esc(selTxt(d,r.sel)||'—')}</td><td>${r.note?esc(r.note):'<span class="s">—</span>'}</td></tr>`).join('')+`</table></div>`}
+  h+=`</div>`});
+ $('mp_body').innerHTML=h;
+ const csv=$('mp_csv');if(csv)csv.onclick=()=>downloadCsv(j.member)}
+async function downloadCsv(member){if(!member)return;$('mp_msg').textContent='';
+ const r=await fetch('/api/admin/members/export',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':PW},body:JSON.stringify({id:member.id})});
+ if(!r.ok){$('mp_msg').textContent='Could not download this file.';return}
+ const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+ const name=String(member.name||'member').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'')||'member';
+ a.download=name+'-gymnazo-results.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
+$('mp_back').onclick=()=>showAdmin(false);
+function reqWhen(t){if(!t)return '';const d=new Date(t*1000);return isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}
+async function loadReq(){const {ok,j}=await A('/api/admin/metric-requests');if(!ok){$('rq').innerHTML='<p class="er">'+esc(j.error||'Could not load requests.')+'</p>';return}const rows=j.requests||[];
+ $('rq').innerHTML=rows.length?rows.map(r=>`<div class="ex" style="align-items:flex-start"><div class="t"><b>${esc(r.name)}</b> <span class="s">${esc(r.status)}</span><div class="s">${esc(r.member)} · ${esc(reqWhen(r.created))}${r.unit?' · '+esc(r.unit):''}</div><div>${esc(r.details)}</div></div><button class="g" data-rq="${r.id}" data-st="${r.status==='new'?'reviewed':'new'}">${r.status==='new'?'Mark reviewed':'Mark new'}</button></div>`).join(''):'<div class="s">No requests yet.</div>';
+ $('rq').querySelectorAll('[data-rq]').forEach(b=>b.onclick=async()=>{const res=await A('/api/admin/metric-requests/status',{id:+b.dataset.rq,status:b.dataset.st});if(!res.ok){$('rq').insertAdjacentHTML('afterbegin','<p class="er">'+esc(res.j.error||'Could not update that request.')+'</p>');return}loadReq()})}
 $('im_f').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>$('im_t').value=r.result;r.readAsText(f)};
 async function imPrev(reset){if(reset)IMF={};const u=$('im_u').value;if(!u){$('im_o').innerHTML='<span class="er">Please choose a member.</span>';return}
  const {ok,j}=await A('/api/admin/import-preview',{user_id:+u,text:$('im_t').value,fixes:IMF});if(!ok){$('im_o').innerHTML='<span class="er">'+esc(j.error||'Error')+'</span>';return}

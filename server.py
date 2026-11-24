@@ -10,6 +10,8 @@ DB = os.environ.get("DB_PATH") or os.path.join(HERE, "metrics.db")
 PORT = int(os.environ.get("PORT", 8090))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 TYPES = ("time", "weight", "reps", "distance", "height", "power", "number")
+# Weight is stored once, in pounds. Kilograms are converted on the way in and only for display.
+KG_PER_LB = 0.45359237
 LOCK = threading.RLock()
 PARTNER_SECRET = os.environ.get("MOMENTUM_API_SECRET", "")
 PARTNER_BAD = {}  # ip -> (bad tries, locked until)
@@ -50,15 +52,35 @@ def add_columns():
     """Nullable third measure (e.g. sled push distance). ADD COLUMN only; existing rows read as NULL."""
     if "tval" not in [r[1] for r in db.execute("PRAGMA table_info(results)")]:
         db.execute("ALTER TABLE results ADD COLUMN tval REAL")
+    if "weight_unit" not in [r[1] for r in db.execute("PRAGMA table_info(users)")]:
+        db.execute("ALTER TABLE users ADD COLUMN weight_unit TEXT DEFAULT 'lb'")
+    db.execute("CREATE TABLE IF NOT EXISTS unit_pref(user_id INTEGER, exercise_id INTEGER, unit TEXT, PRIMARY KEY(user_id, exercise_id))")
+    db.execute("CREATE TABLE IF NOT EXISTS metric_requests(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, details TEXT, unit TEXT, status TEXT DEFAULT 'new', created REAL, reviewed REAL)")
 add_columns()
 
 # ---------- seed ----------
+# Named equipment lists live in exercises.json. A selector with "list": "<name>" uses that array.
+# Only Clean and Jerk references one today; other exercises can reuse a list the same way.
+CATALOG = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
+EQUIPMENT_LISTS = CATALOG.get("equipmentLists") or {}
+
+def apply_equipment_lists(d):
+    """Fill selector options from equipmentLists. The named list wins over a copied options array."""
+    if not isinstance(d, dict) or not d.get("selectors"): return d
+    sels = []
+    for x in d["selectors"]:
+        x = dict(x)
+        opts = EQUIPMENT_LISTS.get(x.get("list"))
+        if opts: x["options"] = [str(o) for o in opts]
+        sels.append(x)
+    out = dict(d); out["selectors"] = sels
+    return out
+
 def seed():
     if db.execute("SELECT 1 FROM meta WHERE k='seeded'").fetchone(): return
     if db.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == 0:
-        data = json.load(open(os.path.join(HERE, "exercises.json"), encoding="utf-8"))
-        for e in data["exercises"]:
-            d = {k: e.get(k) for k in ("primary", "secondary", "third", "selectors", "headline")}
+        for e in CATALOG["exercises"]:
+            d = apply_equipment_lists({k: e.get(k) for k in ("primary", "secondary", "third", "selectors", "headline")})
             db.execute("INSERT INTO exercises(name,description,category,sort,active,def) VALUES(?,?,?,?,1,?)",
                        (e["name"], e["description"], e["category"], e.get("sort", 0), json.dumps(d)))
     db.execute("INSERT OR REPLACE INTO meta VALUES('seeded','1')")
@@ -187,10 +209,14 @@ def validate_def(d):
         t = measure(d["third"], True) if d.get("third") else None
         sels = []
         for x in (d.get("selectors") or [])[:4]:
-            opts = [clean(o, 30) for o in x.get("options", []) if clean(o, 30)][:12]
+            listed = EQUIPMENT_LISTS.get(str(x.get("list") or ""))
+            raw_opts = listed if listed else x.get("options", [])
+            opts = [clean(o, 30) for o in raw_opts if clean(o, 30)][:12]
             key = re.sub(r"[^a-z0-9_]", "", str(x.get("key", "")).lower())[:20]
             if not key or len(opts) < 2: raise ValueError("Each choice needs a short key and at least 2 options.")
-            sels.append({"key": key, "label": clean(x.get("label"), 80) or key, "options": opts, "required": bool(x.get("required", True)), "series": bool(x.get("series", True))})
+            item = {"key": key, "label": clean(x.get("label"), 80) or key, "options": opts, "required": bool(x.get("required", True)), "series": bool(x.get("series", True))}
+            if listed: item["list"] = str(x.get("list"))
+            sels.append(item)
         if len({x["key"] for x in sels}) != len(sels): raise ValueError("Choice keys must be different.")
         h = d.get("headline") if d.get("headline") in ("primary", "secondary") else "primary"
         if h == "secondary" and not s: h = "primary"
@@ -199,7 +225,7 @@ def validate_def(d):
     except Exception: return None, "That exercise definition isn't valid."
 
 def ex_row(r, full=True):
-    return {"id": r[0], "name": r[1], "description": r[2], "category": r[3], "sort": r[4], "active": bool(r[5]), "def": json.loads(r[6])}
+    return {"id": r[0], "name": r[1], "description": r[2], "category": r[3], "sort": r[4], "active": bool(r[5]), "def": apply_equipment_lists(json.loads(r[6]))}
 
 def get_ex(eid):
     r = db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE id=?", (eid,)).fetchone()
@@ -333,6 +359,14 @@ def evaluate_badges(uid):
     return [badge_obj(c) for c in new]
 
 # ---------- result validation ----------
+def canonicalize_weight(d, parsed, unit):
+    """Store weight measures in pounds. 'lb' or a missing unit means the number is already pounds."""
+    if unit != "kg": return parsed
+    for key, m in (("p", d.get("primary")), ("s", d.get("secondary")), ("t", d.get("third"))):
+        if m and m.get("type") == "weight" and parsed.get(key) is not None:
+            parsed[key] = round(parsed[key] / KG_PER_LB, 4)
+    return parsed
+
 def parse_measure(m, v, required):
     if v in (None, ""):
         return (None, None) if not required else (None, "Please fill in " + m["label"].lower().rstrip("?") + ".")
@@ -377,6 +411,65 @@ IMPORT_COLS = ["Date", "Exercise", "Result", "Second result (optional)", "Side /
 OLD_NAME_DEFAULTS = {"sledpush20yd": {"t": 20}}
 
 def norm(s): return re.sub(r"[^a-z0-9]", "", str(s).casefold().replace("º", "").replace("&", "and"))
+
+# Previous titles for Clean and Jerk. Import still maps these; the exercise row itself is renamed in place.
+CLEAN_JERK_NAME = "Clean and Jerk"
+CLEAN_JERK_OLD = (
+    "Barbell Landmine Split Switch Clean & Jerk",
+    "Barbell Landmine Split Switch Clean and Jerk",
+    "Landmine Clean & Jerk",
+    "Landmine Clean and Jerk",
+)
+def migrate_clean_jerk():
+    """Rename the landmine clean and jerk to Clean and Jerk on the same exercise id.
+    Results stay linked by exercise_id. If a different exercise is already named Clean and Jerk, leave both rows alone."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_clean_jerk_v1'").fetchone(): return
+    rows = db.execute("SELECT id, name FROM exercises").fetchall()
+    old_norms = {norm(n) for n in CLEAN_JERK_OLD}
+    old = [r for r in rows if norm(r[1]) in old_norms]
+    taken = [r for r in rows if norm(r[1]) == norm(CLEAN_JERK_NAME) and r[0] not in {o[0] for o in old}]
+    if old and (taken or len(old) > 1):
+        db.execute("INSERT OR REPLACE INTO meta VALUES('mig_clean_jerk_v1','collision')")
+        return
+    db.execute("BEGIN")
+    for eid, _name in old:
+        db.execute("UPDATE exercises SET name=? WHERE id=?", (CLEAN_JERK_NAME, eid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_clean_jerk_v1','1')")
+    db.execute("COMMIT")
+migrate_clean_jerk()
+
+def migrate_clean_jerk_equipment():
+    """Add the shared equipment list to Clean and Jerk only. Old landmine entries keep their row and gain equipment=Landmine."""
+    if db.execute("SELECT 1 FROM meta WHERE k='mig_cj_equip_v1'").fetchone(): return
+    if (db.execute("SELECT v FROM meta WHERE k='mig_clean_jerk_v1'").fetchone() or ["1"])[0] == "collision":
+        db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','skipped')"); return
+    src = next((x for x in CATALOG["exercises"] if x["name"] == CLEAN_JERK_NAME), None)
+    if not src: db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','skipped')"); return
+    wanted = apply_equipment_lists({"selectors": src.get("selectors") or []})["selectors"]
+    equip = next((x for x in wanted if x.get("key") == "equipment"), None)
+    if not equip: db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','skipped')"); return
+    old_norms = {norm(n) for n in CLEAN_JERK_OLD}
+    db.execute("BEGIN")
+    for eid, name, dj in db.execute("SELECT id, name, def FROM exercises").fetchall():
+        if norm(name) != norm(CLEAN_JERK_NAME) and norm(name) not in old_norms: continue
+        d = json.loads(dj)
+        sels = list(d.get("selectors") or [])
+        if any(x.get("key") == "equipment" for x in sels):
+            sels = [equip if x.get("key") == "equipment" else x for x in sels]
+        else:
+            sels = [equip] + sels
+        d["selectors"] = sels
+        if d.get("primary") and src.get("primary", {}).get("label"): d["primary"]["label"] = src["primary"]["label"]
+        db.execute("UPDATE exercises SET def=? WHERE id=?", (json.dumps(apply_equipment_lists(d)), eid))
+        for rid, sj in db.execute("SELECT id, selectors FROM results WHERE exercise_id=?", (eid,)).fetchall():
+            try: sel = json.loads(sj or "{}")
+            except Exception: sel = {}
+            if not sel.get("equipment"):
+                sel["equipment"] = "Landmine"
+                db.execute("UPDATE results SET selectors=? WHERE id=?", (json.dumps(sel), rid))
+    db.execute("INSERT OR REPLACE INTO meta VALUES('mig_cj_equip_v1','1')")
+    db.execute("COMMIT")
+migrate_clean_jerk_equipment()
 
 def fmt_time(sec):
     sec = int(round(sec)); h, m, x = sec // 3600, sec % 3600 // 60, sec % 60
@@ -425,6 +518,10 @@ def match_option(options, v):
 def match_exercise(q, cands):
     nq = norm(q)
     if not nq: return None, []
+    alias = norm(CLEAN_JERK_NAME) if nq in {norm(n) for n in CLEAN_JERK_OLD} else None
+    if alias:
+        hit = [c for c in cands if c[2] == alias]
+        if len(hit) == 1: return hit[0][0], []
     ex = [c for c in cands if c[2] == nq]
     if len(ex) == 1: return ex[0][0], []
     toks = [t for t in re.findall(r"[a-z0-9]+", str(q).casefold()) if len(t) >= 2]
@@ -551,6 +648,8 @@ def run_import(uid, b, confirm):
         sel = {}; err = None
         for x in d["selectors"]:
             raw = g("equipment") if x["key"] == "equipment" else g("damper") if x["key"] == "damper" else g("side")
+            if not raw and x["key"] == "equipment" and norm(g("ex")) in {norm(n) for n in CLEAN_JERK_OLD}:
+                raw = "Landmine"
             if not raw:
                 if x["required"]: err = f"Please add: {x['label']} ({' / '.join(x['options'])})."; break
                 continue
@@ -632,9 +731,15 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self.metric(usr, eid)
         self.send(404, {"error": "nf"})
 
+    def weight_prefs(self, uid):
+        row = db.execute("SELECT weight_unit FROM users WHERE id=?", (uid,)).fetchone()
+        unit = row[0] if row and row[0] in ("lb", "kg") else "lb"
+        overs = {str(eid): u for eid, u in db.execute("SELECT exercise_id, unit FROM unit_pref WHERE user_id=?", (uid,)) if u in ("lb", "kg")}
+        return unit, overs
     def me(self, usr):
         tr = [r[0] for r in db.execute("SELECT exercise_id FROM tracked WHERE user_id=?", (usr[0],))]
-        return {"name": usr[1], "picksSaved": bool(usr[2]), "tracked": tr, "today": today().isoformat()}
+        unit, overs = self.weight_prefs(usr[0])
+        return {"name": usr[1], "picksSaved": bool(usr[2]), "tracked": tr, "today": today().isoformat(), "weightUnit": unit, "weightUnits": overs}
 
     def library(self, usr):
         tr = {r[0] for r in db.execute("SELECT exercise_id FROM tracked WHERE user_id=?", (usr[0],))}
@@ -711,6 +816,8 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self.send(400 if "error" in r else 200, r)
             if p == "/api/nudge/hide":
                 db.execute("UPDATE users SET hide_nudge_until=? WHERE id=?", (time.time() + 30 * 86400, usr[0])); return self.send(200, {"ok": 1})
+            if p == "/api/prefs/weight": return self.set_weight_pref(usr, b)
+            if p == "/api/metric-requests": return self.add_metric_request(usr, b)
             if p == "/api/account/delete": return self.delete_account(usr, b)
         self.send(404, {"error": "nf"})
 
@@ -805,8 +912,7 @@ class H(http.server.BaseHTTPRequestHandler):
         r = db.execute("SELECT salt,pin_hash FROM users WHERE id=?", (usr[0],)).fetchone()
         if not hmac.compare_digest(hp(str(b.get("pin", "")), r[0]), r[1]):
             return self.send(401, {"error": "That PIN doesn't match. Nothing was deleted."})
-        for t in ("results", "tracked", "badges", "sessions"): db.execute(f"DELETE FROM {t} WHERE user_id=?", (usr[0],))
-        db.execute("DELETE FROM users WHERE id=?", (usr[0],))
+        self.wipe_user(usr[0])
         self.send(200, {"deleted": True}, cookie="mx=; Path=/; Max-Age=0")
 
     # tracking
@@ -844,13 +950,46 @@ class H(http.server.BaseHTTPRequestHandler):
         if not me or me["h"] is None: return False
         others = [r["h"] for r in res if r["id"] != rid and r["series"] == me["series"] and r["h"] is not None]
         return bool(others) and all(beats(better, me["h"], o) for o in others)
+    def _weight_unit(self, b):
+        wu = b.get("weight_unit", "lb")
+        if wu in (None, ""): wu = "lb"
+        if wu not in ("lb", "kg"): return None
+        return wu
+    def set_weight_pref(self, usr, b):
+        unit = str(b.get("unit") or "")
+        if unit not in ("lb", "kg"): return self.send(400, {"error": "Choose pounds or kilograms."})
+        if b.get("exercise_id") in (None, ""):
+            db.execute("UPDATE users SET weight_unit=? WHERE id=?", (unit, usr[0]))
+        else:
+            try: eid = int(b.get("exercise_id"))
+            except Exception: return self.send(400, {"error": "bad request"})
+            if not get_ex(eid): return self.send(404, {"error": "That exercise isn't available."})
+            if b.get("clear"): db.execute("DELETE FROM unit_pref WHERE user_id=? AND exercise_id=?", (usr[0], eid))
+            else: db.execute("INSERT OR REPLACE INTO unit_pref(user_id,exercise_id,unit) VALUES(?,?,?)", (usr[0], eid, unit))
+        unit, overs = self.weight_prefs(usr[0])
+        self.send(200, {"weightUnit": unit, "weightUnits": overs})
+    def add_metric_request(self, usr, b):
+        name, details, unit = clean(b.get("name"), 80), clean(b.get("details"), 500), clean(b.get("unit"), 24)
+        if not name: return self.send(400, {"error": "Please name the metric."})
+        if not details: return self.send(400, {"error": "Please say how you would measure it."})
+        if db.execute("SELECT COUNT(*) FROM metric_requests WHERE user_id=?", (usr[0],)).fetchone()[0] >= 30:
+            return self.send(400, {"error": "That's a lot of requests. Please ask a coach at the studio."})
+        cur = db.execute("INSERT INTO metric_requests(user_id,name,details,unit,status,created) VALUES(?,?,?,?, 'new', ?)", (usr[0], name, details, unit, time.time()))
+        self.send(200, {"ok": True, "id": cur.lastrowid})
+    def wipe_user(self, uid):
+        for t in ("results", "tracked", "badges", "sessions", "unit_pref", "metric_requests"):
+            db.execute(f"DELETE FROM {t} WHERE user_id=?", (uid,))
+        db.execute("DELETE FROM users WHERE id=?", (uid,))
     def add_result(self, usr, b):
         try: eid = int(b.get("exercise_id"))
         except Exception: return self.send(400, {"error": "bad request"})
         ex = get_ex(eid)
         if not ex or not ex["active"]: return self.send(404, {"error": "That exercise isn't available."})
+        wu = self._weight_unit(b)
+        if not wu: return self.send(400, {"error": "Choose pounds or kilograms."})
         r, err = parse_result(ex["def"], b)
         if err: return self.send(400, {"error": err})
+        r = canonicalize_weight(ex["def"], r, wu)
         if db.execute("SELECT COUNT(*) FROM results WHERE user_id=?", (usr[0],)).fetchone()[0] >= 20000:
             return self.send(400, {"error": "That's a lot of results! Please contact the studio."})
         cur = db.execute("INSERT INTO results(user_id,exercise_id,day,pval,sval,tval,selectors,note,created) VALUES(?,?,?,?,?,?,?,?,?)",
@@ -864,8 +1003,12 @@ class H(http.server.BaseHTTPRequestHandler):
         except Exception: return self.send(400, {"error": "bad request"})
         row = db.execute("SELECT exercise_id FROM results WHERE id=? AND user_id=?", (rid, usr[0])).fetchone()
         if not row: return self.send(404, {"error": "We couldn't find that result."})
-        ex = get_ex(row[0]); r, err = parse_result(ex["def"], b)
+        ex = get_ex(row[0])
+        wu = self._weight_unit(b)
+        if not wu: return self.send(400, {"error": "Choose pounds or kilograms."})
+        r, err = parse_result(ex["def"], b)
         if err: return self.send(400, {"error": err})
+        r = canonicalize_weight(ex["def"], r, wu)
         db.execute("UPDATE results SET day=?,pval=?,sval=?,tval=?,selectors=?,note=? WHERE id=?", (r["day"], r["p"], r["s"], r["t"], json.dumps(r["sel"]), r["note"], rid))
         res = load_results(usr[0], row[0]); analyse(ex["def"], res)
         self.send(200, {"id": rid, "pb": self._is_best_now(ex, res, rid), "newBadges": evaluate_badges(usr[0])})
@@ -882,8 +1025,29 @@ class H(http.server.BaseHTTPRequestHandler):
         if not n: return self.send(404, {"error": "We couldn't find that result."})
         self.send(200, {"ok": 1})
 
-    # ---- admin (aggregate counts only; never individual scores) ----
+    # ---- admin (library + member tools; stats stay aggregate; one member's progress is opt-in) ----
     FAILS = [0, 0.0]
+    def member_progress(self, uid):
+        """Tracked metrics, full history, bests, and earned badges for one member. No PINs or secrets."""
+        r = db.execute("SELECT id,name,picks_saved FROM users WHERE id=?", (uid,)).fetchone()
+        if not r: return None
+        tracked = {row[0] for row in db.execute("SELECT exercise_id FROM tracked WHERE user_id=?", (uid,))}
+        have = tracked | {row[0] for row in db.execute("SELECT DISTINCT exercise_id FROM results WHERE user_id=?", (uid,))}
+        metrics = []
+        if have:
+            marks = ",".join("?" * len(have))
+            rows = db.execute("SELECT id,name,description,category,sort,active,def FROM exercises WHERE id IN (%s) ORDER BY sort,id" % marks, tuple(have)).fetchall()
+            for row in rows:
+                ex = ex_row(row); res = load_results(uid, ex["id"]); sm = analyse(ex["def"], res)
+                metrics.append({"id": ex["id"], "name": ex["name"], "description": ex["description"], "category": ex["category"],
+                                "active": ex["active"], "tracked": ex["id"] in tracked, "sort": ex["sort"], "def": ex["def"], "better": better_of(ex["def"]),
+                                "results": [{"id": x["id"], "day": x["day"], "p": x["p"], "s": x["s"], "t": x["t"], "sel": x["sel"], "note": x["note"], "series": x["series"], "h": x["h"], "isPb": x["is_pb"]} for x in res],
+                                "series": list(sm.values())})
+        metrics.sort(key=lambda m: (0 if m["tracked"] else 1, m["sort"], m["id"]))
+        for m in metrics: del m["sort"]
+        badges = self.badges(r)
+        earned = [b for b in badges["badges"] if b.get("earned")]
+        return {"member": {"id": r[0], "name": r[1]}, "metrics": metrics, "badges": earned, "badgeCount": len(earned), "badgeTotal": len(badges["badges"])}
     def admin(self, p, b):
         if not ADMIN_PASSWORD: return self.send(403, {"error": "Admin is not set up."})
         now = time.time()
@@ -936,6 +1100,30 @@ class H(http.server.BaseHTTPRequestHandler):
             return self.send(200, {"dry": bool(b.get("dry")), "added": [a[0] for a in added], "skipped": skipped, "bad": bad})
         if p == "/api/admin/members":  # names only: needed to pick who an import is for
             return self.send(200, {"members": [{"id": r[0], "name": r[1]} for r in db.execute("SELECT id,name FROM users ORDER BY name_key")]})
+        if p == "/api/admin/members/progress":
+            try: uid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "Please choose a member."})
+            data = self.member_progress(uid)
+            if not data: return self.send(404, {"error": "No such member."})
+            return self.send(200, data)
+        if p == "/api/admin/members/export":
+            try: uid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "Please choose a member."})
+            row = db.execute("SELECT name FROM users WHERE id=?", (uid,)).fetchone()
+            if not row: return self.send(404, {"error": "No such member."})
+            fn = re.sub(r"[^A-Za-z0-9._-]+", "-", row[0]).strip("-") or "member"
+            return self.send(200, export_csv(uid).encode("utf-8-sig"), "text/csv; charset=utf-8", extra={"Content-Disposition": 'attachment; filename="%s-gymnazo-results.csv"' % fn})
+        if p == "/api/admin/metric-requests":
+            rows = db.execute("SELECT q.id,u.name,q.name,q.details,q.unit,q.status,q.created FROM metric_requests q JOIN users u ON u.id=q.user_id ORDER BY CASE q.status WHEN 'new' THEN 0 ELSE 1 END, q.created DESC, q.id DESC").fetchall()
+            return self.send(200, {"requests": [{"id": r[0], "member": r[1], "name": r[2], "details": r[3], "unit": r[4] or "", "status": r[5], "created": r[6]} for r in rows]})
+        if p == "/api/admin/metric-requests/status":
+            try: rid = int(b.get("id"))
+            except Exception: return self.send(400, {"error": "bad request"})
+            status = str(b.get("status") or "")
+            if status not in ("new", "reviewed"): return self.send(400, {"error": "Choose new or reviewed."})
+            n = db.execute("UPDATE metric_requests SET status=?, reviewed=? WHERE id=?", (status, time.time() if status == "reviewed" else None, rid)).rowcount
+            if not n: return self.send(404, {"error": "No such request."})
+            return self.send(200, {"ok": 1, "status": status})
         if p == "/api/admin/members/reset-pin":
             pin = str(b.get("pin", ""))
             if not re.fullmatch(r"\d{4}", pin): return self.send(400, {"error": "The new PIN must be exactly 4 digits."})
@@ -954,8 +1142,7 @@ class H(http.server.BaseHTTPRequestHandler):
             r = db.execute("SELECT name FROM users WHERE id=?", (uid,)).fetchone()
             if not r: return self.send(404, {"error": "No such member."})
             if str(b.get("confirm", "")).strip().casefold() != r[0].casefold(): return self.send(400, {"error": "Type the member's name exactly to confirm."})
-            for t in ("results", "tracked", "badges", "sessions"): db.execute(f"DELETE FROM {t} WHERE user_id=?", (uid,))
-            db.execute("DELETE FROM users WHERE id=?", (uid,))
+            self.wipe_user(uid)
             return self.send(200, {"deleted": True})
         if p in ("/api/admin/import-preview", "/api/admin/import-confirm"):
             try: uid = int(b.get("user_id"))

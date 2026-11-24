@@ -2,10 +2,12 @@
 
 A private, simple web app for Gymnazo members to track their own ability and capacity test results over time. Intended home: https://metrics.gymnazo.com
 
-- **Members only ever see their own data.** No leaderboards, no sharing.
+- **Members only ever see their own data.** No leaderboards, no sharing. An admin signed in with the admin password can open one member's progress from `/admin`.
 - 35 exercises from the studio's Ability & Capacity Metrics list (`exercises.json`), searchable and grouped by category.
 - Members pick the metrics they want to follow ("My metrics"), log results (time, weight, reps, distance, height, power, with side / equipment / damper choices), edit or delete entries, and see a line chart, personal best and improvement message per metric.
 - Private milestone badges (13), a gentle "ready to test again?" nudge after 90 days, and "Delete my account and data".
+- Weight is stored in pounds. Each member can show and type pounds or kilograms (account-wide, or for one metric). Older results stay in pounds and still display correctly.
+- A member can request a metric (name, how they would measure it, optional unit). It is saved for an admin to mark new or reviewed. No email is sent.
 - Built for members over 40: 56px+ tap targets, 18px+ text, plain language.
 - Branding based on gymnazo.com: brand orange `#d4631c` (sampled from the site logo), charcoal text, white/warm background, Avenir Next-style font stack, logo from the site, tagline "Train for the decades ahead" / "Move With Confidence".
 
@@ -15,7 +17,7 @@ A private, simple web app for Gymnazo members to track their own ability and cap
 - Every result has a private note (up to 500 characters), editable any time from the results list or the chart popup.
 - Import past results (Me tab or My Progress): download the CSV template, fill in, upload or paste, preview, fix names with a dropdown, confirm. Results keep their original dates, exercises are auto-tracked, badges are awarded once with one summary. Max 2,000 rows per import. "Download my results (CSV)" exports everything including notes in the same format.
 - CSV columns: `Date, Exercise, Result, Second result (optional), Side / Hand / Foot, Equipment, Damper, Note`.
-- Admin can import a member's history from /admin (choose member by name, preview, confirm). Admin never sees existing scores or notes.
+- Admin can import a member's history from /admin (choose member by name, preview, confirm). The import preview still does not show results already saved. View progress on the members list opens that one member's tracked metrics, history, bests, and badges.
 
 ## Stack
 Python 3 standard library only (`server.py`), single-file front end (`index.html`), SQLite. No CDNs, no dependencies.
@@ -27,13 +29,13 @@ PORT=8090 DB_PATH=./metrics.db ADMIN_PASSWORD=choose-one python3 server.py
 Env vars: `PORT`, `HOST`, `DB_PATH` (SQLite file), `ADMIN_PASSWORD` (enables `/admin`; never commit it).
 
 ## Admin (`/admin`)
-Protected by `ADMIN_PASSWORD` (sent as the `X-Admin-Password` header). Manage the exercise library (add, edit, hide, reorder, metric types/units, choices), bulk-import exercises from JSON, and see aggregate counts only (members, results, most-tracked exercises). Individual scores are never shown.
+Protected by `ADMIN_PASSWORD` (sent as the `X-Admin-Password` header). Manage the exercise library (add, edit, hide, reorder, metric types/units, choices), bulk-import exercises from JSON, and see aggregate counts (members, results, most-tracked exercises). View progress (`POST /api/admin/members/progress`) returns one member's tracked metrics, each result over time, bests, and earned badges. `POST /api/admin/members/export` downloads that member's results as CSV. Both require the admin password (401 if it is wrong or missing, 403 if admin is not set up) and never include PINs, salts, or password hashes. The numbers card stays counts only.
 
 ## Login
 "I'm new" (name + 4-digit PIN, rejects existing names) and "I already signed up" (log in only, never creates an account). PINs are salted + PBKDF2 hashed; 5 wrong tries lock the account for 5 minutes. Forgot a PIN? Members email Memberservice@gymnazo.com or ask any coach.
 
 ## Exercise definition format (`exercises.json`)
-`name`, `description`, `category`, `primary` `{type, label, unit, better: higher|lower}`, optional `secondary` (+ `optional`), optional `selectors` `[{key,label,options,required,series}]` (series=true gives each choice its own chart/personal best), `headline` (`primary` or `secondary`, which measure drives the chart and personal best). Types: time, weight, reps, distance, height, power, number. Times are stored in seconds.
+`name`, `description`, `category`, `primary` `{type, label, unit, better: higher|lower}`, optional `secondary` (+ `optional`), optional `selectors` `[{key,label,options,required,series}]` (series=true gives each choice its own chart/personal best), `headline` (`primary` or `secondary`, which measure drives the chart and personal best). Types: time, weight, reps, distance, height, power, number. Times are stored in seconds. Shared equipment choices live once in `equipmentLists` (a selector sets `"list": "free_weight"` instead of copying the options). Clean and Jerk is the only exercise using that list today: Barbell, Landmine, Dumbbell, Kettlebell. Bests are kept separate per equipment. Entries saved under the old landmine name stay on this exercise with equipment Landmine.
 
 ## Milestones
 First result · first personal best · 3 / 5 / 10 results on one metric · tracking 5 / 10 metrics · results in 3 / 6 / 12 different months · 3 months in a row · 10% / 25% improvement.
